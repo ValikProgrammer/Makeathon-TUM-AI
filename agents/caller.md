@@ -1,40 +1,46 @@
 # Outbound Kate — Agent Briefing
 
-**Owner:** _(Team member name)_
 **Agent colour in cockpit:** amber
-**Happy Robot pillar:** Autonomous Agents (primary) · Dashboard (live transcript)
+**Platform:** HappyRobot (workflow: `y3zadtxp7ibb`, production)
+**Voice:** Kate HR · English · From: `+498941432042`
 
 ---
 
 ## Mission (one sentence)
 
-Kate is the one-and-only face to the customer — she reaches out on signal,
-qualifies, follows up, sends Otto's offer, and closes the deal across voice,
-SMS and email, hands off to a human only when truly stuck.
+Kate makes outbound qualification calls to senior-living operators in Germany,
+collects six envelope fields, and hands off opted-in leads to Otto for proposal generation.
 
 ---
 
-## Her position in the pipeline
+## Current implementation status
 
 ```
-Lead → KATE ──(qualify)──► opted_in ──(Otto drafts)──► KATE (send) ──(follow-up, close)──► Deal
-                                                                         ↘ Human (escalation)
+Cockpit "Qualify now"
+        ↓  POST /api/qualify
+HappyRobot webhook (production)
+        ↓  Kate calls lead.contact.phone
+Voice call
+        ↓  Prompt node extracts JSON
+HTTP Action → POST /api/callback
+        ↓
+Cockpit updates lead stage
 ```
 
-- **Input:** `Lead` with ≥ 1 `signal_id` + ≥ 1 channel (phone, email, WhatsApp).
-- **Output:** `CallResult` → (after Otto) `DispatchedOffer` → `DealResult`.
-- Kate owns the customer relationship end-to-end. Otto is her backroom, not her substitute.
+## Channels — current vs planned
 
-## Channels Kate handles
-
-| Channel  | Direction | When used |
+| Channel  | Status | Notes |
 |---|---|---|
-| Voice    | out / in  | Primary first-touch, complex qualification, closing |
-| SMS      | out / in  | Short follow-ups, quick questions, callback scheduling |
-| Email    | out / in  | Offer delivery, longer replies, document exchange |
-| WhatsApp | out / in  | If prospect prefers it, same role as SMS |
+| Voice (outbound) | ✅ Live | Only active channel. Triggered from Cockpit. |
+| SMS | ❌ Not implemented | Planned post-hackathon |
+| Email | ❌ Not implemented | Planned post-hackathon |
+| WhatsApp | ❌ Not implemented | Planned post-hackathon |
 
-All channels share one conversation thread per lead (Happy Robot Contacts + Memory). Kate always sees the full prior history before answering.
+## Prior history — does Kate see it?
+
+**No.** Not in the current build. `contact_intel` is not passed in the webhook payload.
+To enable: store prior call summaries in DB and pass as `contact_intel` when triggering.
+HappyRobot supports this via the `contact_intel.recent_interactions` field.
 
 ---
 
@@ -278,12 +284,40 @@ The block below is parsed by the backend after the call ends. It is **not** part
 - Lead reaches Kate first (SMS / email / callback request from landing page).
 - Kate must check: is there a known signal? If yes — fine. If no — ask briefly what led them to reach out, record as implicit signal, continue.
 
-## Happy Robot capabilities Kate uses
+## HappyRobot capabilities in use
 
-- **Voice + SMS + Email + WhatsApp channels** — including inbound handling.
-- **AI Extract** against live + post-contact transcripts for the six fields.
-- **Contacts / Memory** — persistent thread context across channels.
-- **Workflow engine** — follow-up timers, channel routing.
+- **Voice outbound** — Kate calls `lead.contact.phone` passed via webhook `to` field.
+- **Prompt node** — post-call LLM extraction, outputs JSON parsed by `/api/callback`.
+- **HTTP Action node** — POSTs call result to `NEXT_PUBLIC_APP_URL/api/callback`.
+
+## Trigger a call manually
+
+```bash
+curl -X POST "https://workflows.platform.eu.happyrobot.ai/hooks/y3zadtxp7ibb" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "to": "+4916095428835",
+    "contact_id": "L-TEST-1",
+    "contact_name": "Vova",
+    "hook": "simplify",
+    "signal_summary": "public tender for residential kitchen appliances in Munich",
+    "callback_url": "https://lease-a-kitchen.loca.lt/api/callback"
+  }'
+```
+
+---
+
+## Runtime inputs passed at call time (`/api/qualify`)
+
+| Field | Source |
+|---|---|
+| `to` | `lead.contact.phone` |
+| `contact_id` | `lead.id` |
+| `contact_name` | `lead.contact.name` |
+| `facility_name` | `lead.facility` |
+| `signal_summary` | `lead.signal.title` |
+| `hook` | auto-selected by ICP: `high`→simplify, `mid`→optimize, `low`→scale |
+| `callback_url` | `NEXT_PUBLIC_APP_URL/api/callback` |
 
 ## Observability — events to the cockpit
 
@@ -306,15 +340,16 @@ The block below is parsed by the backend after the call ends. It is **not** part
 - **Scene 05:** After opt-in, Kate dispatches Otto's draft via email. The dispatch appears in the activity log. Pipeline moves to "Offer made".
 - **Scene 06 (bonus):** Inbound SMS from prospect — Kate picks it up in the same thread and replies.
 
-## Out of scope for 48h
+## Out of scope for hackathon
 
-- Multi-turn personality simulation (standard HR voice is enough).
-- Dialect handling (Standard English; DE optional if time allows).
-- Channels beyond voice/SMS/email/WhatsApp.
-- Custom telephony gateway.
+- SMS / Email / WhatsApp channels.
+- Prior history / contact_intel passing.
+- Inbound call handling.
+- Live transcript streaming to Cockpit.
+- Multi-turn follow-up cadence.
 
 ---
-
+о
 ## Open items / TBD
 
 - [x] Six envelope fields — defined (see Step 2).
