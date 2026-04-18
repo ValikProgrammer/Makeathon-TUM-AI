@@ -10,6 +10,8 @@ import { getLeadById, updateLeadStage, appendAudit, isDnc, type MotivationString
 
 const HAPPYROBOT_CALLER_WEBHOOK = process.env.HAPPYROBOT_CALLER_WEBHOOK_URL ?? "";
 const HAPPYROBOT_API_KEY = process.env.HAPPYROBOT_API_KEY ?? "";
+const CALLBACK_URL = process.env.NEXT_PUBLIC_APP_URL ? `${process.env.NEXT_PUBLIC_APP_URL}/api/callback` : "";
+const EVENTS_URL = process.env.EVENTS_URL ?? "";
 
 /**
  * Pick the BSH-aligned motivation_string for Kate's opener.
@@ -33,19 +35,34 @@ function pickMotivation(role: string | undefined, score: number | undefined): Mo
 }
 
 export async function POST(req: NextRequest) {
+  console.log("\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+  console.log("🎯 [POST /api/qualify] — trigger Kate (Caller) for a lead");
+  console.log("   Purpose: called from cockpit 'Qualify now' → sends task to HappyRobot");
+  console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+
   const { lead_id } = await req.json().catch(() => ({}));
-  if (!lead_id) return NextResponse.json({ error: "lead_id required" }, { status: 400 });
+  if (!lead_id) {
+    console.log("❌ [/api/qualify] 400 — NOT CONNECTED: missing lead_id in request body");
+    return NextResponse.json({ error: "lead_id required" }, { status: 400 });
+  }
+  console.log(`🔍 [/api/qualify] Looking up lead: "${lead_id}"`);
 
-  const lead = getLeadById(lead_id);
-  if (!lead) return NextResponse.json({ error: "lead not found" }, { status: 404 });
+  const lead = await getLeadById(lead_id);
+  if (!lead) {
+    console.log(`❌ [/api/qualify] 404 — Lead "${lead_id}" not found in DB`);
+    return NextResponse.json({ error: "lead not found" }, { status: 404 });
+  }
+  console.log(`✅ [/api/qualify] Lead found: "${lead.company_name}" (${lead.city ?? "—"}), stage="${lead.stage}"`);
 
-  // Require phone (captured on landing page) before calling
   if (!lead.person_phone) {
+    console.log(`❌ [/api/qualify] 412 — No phone number for lead "${lead_id}". Kate cannot call without a number`);
     return NextResponse.json({ error: "no phone — lead has not opted in via landing page yet" }, { status: 412 });
   }
+  console.log(`📱 [/api/qualify] Phone: ${lead.person_phone}`);
 
   // Guardrail: DNC check
   if (isDnc(lead.person_phone) || isDnc(lead.person_email ?? "")) {
+    console.log(`🚫 [/api/qualify] 403 — Contact is on DNC list. Call blocked`);
     appendAudit({
       timestamp: new Date().toISOString(),
       agent: "guardrail",
@@ -55,11 +72,12 @@ export async function POST(req: NextRequest) {
     });
     return NextResponse.json({ error: "contact is on DNC list" }, { status: 403 });
   }
+  console.log(`✅ [/api/qualify] DNC check passed`);
 
   // Trigger HappyRobot Caller workflow
   if (HAPPYROBOT_CALLER_WEBHOOK) {
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "";
     const motivation = lead.motivation_string ?? pickMotivation(lead.person_role, lead.score);
+    console.log(`🧠 [/api/qualify] Motivation selected: "${motivation}" (role="${lead.person_role ?? "—"}", score=${lead.score ?? "—"})`);
 
     const payload: Record<string, unknown> = {
       to: lead.person_phone,
@@ -67,15 +85,23 @@ export async function POST(req: NextRequest) {
       lead_id: lead.id,
       contact_name: lead.person_name ?? "",
       contact_role: lead.person_role ?? "",
+      contact_email: lead.person_email ?? "",
       facility_name: lead.company_name,
       city: lead.city ?? "",
       signal_summary: lead.signal_summary ?? `new senior-living facility in ${lead.city ?? "Germany"}`,
       signal_url: lead.signal_url ?? "",
       motivation_string: motivation,
-      hook: motivation, // backwards compat with existing HappyRobot workflow variable name
+      hook: motivation,
       campaign_id: "makeathon-2026",
-      callback_url: appUrl ? `${appUrl}/api/callback` : "",
+      callback_url: CALLBACK_URL,
+      events_url: EVENTS_URL,
     };
+
+    console.log(`🚀 [/api/qualify] Sending webhook to HappyRobot (Kate):`);
+    console.log(`   → URL: ${HAPPYROBOT_CALLER_WEBHOOK}`);
+    console.log(`   → Authorization: Bearer present: ${!!HAPPYROBOT_API_KEY}`);
+    console.log(`   → callback_url (where Kate sends the result): ${CALLBACK_URL || "⚠️  NOT SET"}`);
+    console.log(`   → events_url (where Kate sends events): ${EVENTS_URL || "⚠️  NOT SET"}`);
 
     const hrResponse = await fetch(HAPPYROBOT_CALLER_WEBHOOK, {
       method: "POST",
@@ -88,8 +114,12 @@ export async function POST(req: NextRequest) {
 
     if (!hrResponse.ok) {
       const err = await hrResponse.text();
+      console.log(`❌ [/api/qualify] 502 — HappyRobot returned error: ${err}`);
       return NextResponse.json({ error: `HappyRobot error: ${err}` }, { status: 502 });
     }
+    console.log(`✅ [/api/qualify] HappyRobot accepted task (${hrResponse.status}). Kate will start calling`);
+  } else {
+    console.log(`⚠️  [/api/qualify] HAPPYROBOT_CALLER_WEBHOOK_URL not set — call not initiated (audit only)`);
   }
 
   appendAudit({
@@ -99,6 +129,9 @@ export async function POST(req: NextRequest) {
     leadId: lead_id,
     meta: { triggered_by: "user" },
   });
+  console.log(`📝 [/api/qualify] Audit entry "orchestrator.qualify_triggered" saved`);
 
+  console.log(`✅ [/api/qualify] Done. Kate triggered for lead "${lead_id}"`);
+  console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n");
   return NextResponse.json({ ok: true, lead_id });
 }

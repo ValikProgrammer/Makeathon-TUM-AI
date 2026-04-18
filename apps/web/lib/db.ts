@@ -1,8 +1,16 @@
+/**
+ * db.ts — all lead reads/writes go to HappyRobot Twin (leads_untor table).
+ * Audit log stays local (JSON file). DNC stays local (config file).
+ */
 import fs from "fs";
 import path from "path";
 
+// ── Twin config ────────────────────────────────────────────────────────────
+const TWIN_BASE = "https://platform.eu.happyrobot.ai/api/v2";
+const TWIN_TOKEN = process.env.TWIN_API_KEY ?? process.env.HAPPYROBOT_API_KEY ?? "";
+const TWIN_TABLE = "leads_untor";
+
 const DATA_DIR = path.join(process.cwd(), "data");
-const LEADS_FILE = path.join(DATA_DIR, "leads.json");
 const AUDIT_FILE = path.join(DATA_DIR, "audit.json");
 const DNC_FILE = path.join(process.cwd(), "../../config/dnc.json");
 
@@ -11,8 +19,6 @@ function ensureDir() {
 }
 
 // ── Types ──────────────────────────────────────────────────────────────────
-// Single flat Lead — mirrors the `leads` table in seed/scout-seed.sql.
-// One row = one lead throughout the Jack → Kate → Otto pipeline.
 
 export type Stage =
   | "new"
@@ -28,37 +34,26 @@ export type Stage =
 export type MotivationString = "simplify" | "scale" | "optimize" | "circular";
 
 export type Lead = {
-  // Identity & lifecycle
   id: string;
   created_at: string;
   updated_at: string;
   stage: Stage;
-
-  // Company (Jack, real)
   company_name: string;
   street?: string;
   postal_code?: string;
   city?: string;
   url?: string;
-
-  // Contact
   person_name?: string;
   person_role?: string;
   person_email?: string;
-  person_phone?: string; // captured on the landing page, NOT by Jack
-
-  // Jack output
+  person_phone?: string;
   signal_url?: string;
   signal_summary?: string;
   motivation_string?: MotivationString;
   score?: number;
-
-  // Consent (landing-page submit)
   consent_given_at?: string;
   consent_text_version?: string;
   consent_ip?: string;
-
-  // Kate output
   facility_type?: string;
   num_units?: number;
   timeline?: string;
@@ -73,8 +68,6 @@ export type Lead = {
   call_transcript_url?: string;
   call_notes?: string;
   escalation_reason?: string;
-
-  // Otto output
   offer_sent_at?: string;
   offer_accepted_at?: string;
 };
@@ -88,57 +81,138 @@ export type AuditEntry = {
   meta?: Record<string, unknown>;
 };
 
-// ── Leads ──────────────────────────────────────────────────────────────────
+// ── Twin helpers ───────────────────────────────────────────────────────────
 
-function readLeads(): Lead[] {
-  ensureDir();
-  if (!fs.existsSync(LEADS_FILE)) {
-    const seed = buildSeedLeads();
-    fs.writeFileSync(LEADS_FILE, JSON.stringify(seed, null, 2));
-    return seed;
+function twinHeaders() {
+  return {
+    "Authorization": `Bearer ${TWIN_TOKEN}`,
+    "Content-Type": "application/json",
+  };
+}
+
+/** Normalise a raw Twin row → Lead (nulls → undefined, coerce types) */
+function rowToLead(row: Record<string, unknown>): Lead {
+  return {
+    id: String(row.id),
+    created_at: String(row.created_at ?? new Date().toISOString()),
+    updated_at: String(row.updated_at ?? new Date().toISOString()),
+    stage: (row.stage as Stage) ?? "new",
+    company_name: String(row.company_name ?? "Unknown"),
+    street: row.street != null ? String(row.street) : undefined,
+    postal_code: row.postal_code != null ? String(row.postal_code) : undefined,
+    city: row.city != null ? String(row.city) : undefined,
+    url: row.url != null ? String(row.url) : undefined,
+    person_name: row.person_name != null ? String(row.person_name) : undefined,
+    person_role: row.person_role != null ? String(row.person_role) : undefined,
+    person_email: row.person_email != null ? String(row.person_email) : undefined,
+    person_phone: row.person_phone != null ? String(row.person_phone) : undefined,
+    signal_url: row.signal_url != null ? String(row.signal_url) : undefined,
+    signal_summary: row.signal_summary != null ? String(row.signal_summary) : undefined,
+    motivation_string: row.motivation_string != null ? (row.motivation_string as MotivationString) : undefined,
+    score: row.score != null ? Number(row.score) : undefined,
+    consent_given_at: row.consent_given_at != null ? String(row.consent_given_at) : undefined,
+    consent_text_version: row.consent_text_version != null ? String(row.consent_text_version) : undefined,
+    consent_ip: row.consent_ip != null ? String(row.consent_ip) : undefined,
+    facility_type: row.facility_type != null ? String(row.facility_type) : undefined,
+    num_units: row.num_units != null ? Number(row.num_units) : undefined,
+    timeline: row.timeline != null ? String(row.timeline) : undefined,
+    preferred_term_months: row.preferred_term_months != null ? Number(row.preferred_term_months) : undefined,
+    decision_maker: row.decision_maker != null ? String(row.decision_maker) : undefined,
+    bundle_leader: row.bundle_leader != null ? Number(row.bundle_leader) : undefined,
+    bundle_profi: row.bundle_profi != null ? Number(row.bundle_profi) : undefined,
+    bundle_top_feature: row.bundle_top_feature != null ? Number(row.bundle_top_feature) : undefined,
+    opt_in: row.opt_in != null ? Boolean(row.opt_in) : undefined,
+    preferred_channel: row.preferred_channel != null ? (row.preferred_channel as Lead["preferred_channel"]) : undefined,
+    contact_address: row.contact_address != null ? String(row.contact_address) : undefined,
+    call_transcript_url: row.call_transcript_url != null ? String(row.call_transcript_url) : undefined,
+    call_notes: row.call_notes != null ? String(row.call_notes) : undefined,
+    escalation_reason: row.escalation_reason != null ? String(row.escalation_reason) : undefined,
+    offer_sent_at: row.offer_sent_at != null ? String(row.offer_sent_at) : undefined,
+    offer_accepted_at: row.offer_accepted_at != null ? String(row.offer_accepted_at) : undefined,
+  };
+}
+
+// ── Lead CRUD (async — all go to Twin) ────────────────────────────────────
+
+export async function getLeads(): Promise<Lead[]> {
+  const res = await fetch(`${TWIN_BASE}/twin/tables/${TWIN_TABLE}?limit=500`, {
+    headers: twinHeaders(),
+    cache: "no-store",
+  });
+  if (!res.ok) {
+    console.error(`[Twin] getLeads failed: ${res.status} ${await res.text()}`);
+    return [];
   }
-  return JSON.parse(fs.readFileSync(LEADS_FILE, "utf-8"));
+  const data = await res.json() as { rows: Record<string, unknown>[] };
+  return (data.rows ?? []).map(rowToLead);
 }
 
-function writeLeads(leads: Lead[]) {
-  ensureDir();
-  fs.writeFileSync(LEADS_FILE, JSON.stringify(leads, null, 2));
+export async function getLeadById(id: string): Promise<Lead | undefined> {
+  const leads = await getLeads();
+  return leads.find((l) => l.id === id);
 }
 
-export function getLeads(): Lead[] {
-  return readLeads();
+export async function getLeadByPhone(phone: string): Promise<Lead | undefined> {
+  if (!phone) return undefined;
+  const normalized = phone.replace(/\s+/g, "");
+  const leads = await getLeads();
+  return leads.find((l) => l.person_phone?.replace(/\s+/g, "") === normalized);
 }
 
-export function getLeadById(id: string): Lead | undefined {
-  return readLeads().find((l) => l.id === id);
+export async function upsertLead(lead: Partial<Lead> & { id: string; company_name: string }): Promise<Lead> {
+  const now = new Date().toISOString();
+  const values = { ...lead, updated_at: now };
+
+  // Try INSERT first (upsert via primary key)
+  const res = await fetch(`${TWIN_BASE}/twin/tables/${TWIN_TABLE}/rows`, {
+    method: "POST",
+    headers: twinHeaders(),
+    body: JSON.stringify({ values }),
+  });
+
+  if (res.ok) {
+    const row = await res.json() as Record<string, unknown>;
+    console.log(`[Twin] upsertLead INSERT ok: ${lead.id}`);
+    return rowToLead(row);
+  }
+
+  // If insert fails (duplicate PK), fall back to PATCH
+  const patchRes = await fetch(`${TWIN_BASE}/twin/tables/${TWIN_TABLE}/rows`, {
+    method: "PATCH",
+    headers: twinHeaders(),
+    body: JSON.stringify({ primaryKey: { id: lead.id }, updates: values }),
+  });
+  if (!patchRes.ok) {
+    console.error(`[Twin] upsertLead PATCH failed: ${patchRes.status} ${await patchRes.text()}`);
+  } else {
+    console.log(`[Twin] upsertLead PATCH ok: ${lead.id}`);
+  }
+  const existing = await getLeadById(lead.id);
+  return existing ?? (lead as Lead);
 }
 
-export function upsertLead(lead: Lead) {
-  const leads = readLeads();
-  const idx = leads.findIndex((l) => l.id === lead.id);
-  lead.updated_at = new Date().toISOString();
-  if (idx >= 0) leads[idx] = lead;
-  else leads.unshift(lead);
-  writeLeads(leads);
-  return lead;
+export async function updateLead(id: string, patch: Partial<Lead>): Promise<Lead | null> {
+  const updates = { ...patch, updated_at: new Date().toISOString() };
+  const res = await fetch(`${TWIN_BASE}/twin/tables/${TWIN_TABLE}/rows`, {
+    method: "PATCH",
+    headers: twinHeaders(),
+    body: JSON.stringify({ primaryKey: { id }, updates }),
+  });
+  if (!res.ok) {
+    console.error(`[Twin] updateLead failed for ${id}: ${res.status} ${await res.text()}`);
+    return null;
+  }
+  console.log(`[Twin] updateLead ok: ${id}`, Object.keys(updates).join(", "));
+  return getLeadById(id);
 }
 
-export function updateLead(id: string, patch: Partial<Lead>) {
-  const leads = readLeads();
-  const idx = leads.findIndex((l) => l.id === id);
-  if (idx < 0) return null;
-  leads[idx] = { ...leads[idx], ...patch, updated_at: new Date().toISOString() };
-  writeLeads(leads);
-  return leads[idx];
-}
-
-export function updateLeadStage(id: string, stage: Stage, extra?: Partial<Lead>) {
+export async function updateLeadStage(id: string, stage: Stage, extra?: Partial<Lead>): Promise<Lead | null> {
   return updateLead(id, { stage, ...(extra ?? {}) });
 }
 
-// ── Audit ──────────────────────────────────────────────────────────────────
+// ── Audit (local JSON) ─────────────────────────────────────────────────────
 
-export function appendAudit(entry: Omit<AuditEntry, "id">) {
+export function appendAudit(entry: Omit<AuditEntry, "id">): AuditEntry {
   ensureDir();
   const entries: AuditEntry[] = fs.existsSync(AUDIT_FILE)
     ? JSON.parse(fs.readFileSync(AUDIT_FILE, "utf-8"))
@@ -154,7 +228,7 @@ export function getAudit(): AuditEntry[] {
   return JSON.parse(fs.readFileSync(AUDIT_FILE, "utf-8"));
 }
 
-// ── DNC ───────────────────────────────────────────────────────────────────
+// ── DNC (local JSON) ───────────────────────────────────────────────────────
 
 type DncList = { phones: string[]; emails: string[]; whatsapp: string[]; organisations: string[] };
 
@@ -180,19 +254,12 @@ export function isDnc(value: string): boolean {
 
 export function addDnc(type: "phone" | "email" | "whatsapp" | "org", value: string) {
   const dnc = readDnc();
-  const key =
-    type === "org"
-      ? "organisations"
-      : type === "phone"
-      ? "phones"
-      : type === "email"
-      ? "emails"
-      : "whatsapp";
+  const key = type === "org" ? "organisations" : type === "phone" ? "phones" : type === "email" ? "emails" : "whatsapp";
   if (!dnc[key].includes(value)) dnc[key].push(value);
   fs.writeFileSync(DNC_FILE, JSON.stringify({ ...dnc, updated_at: new Date().toISOString() }, null, 2));
 }
 
-// ── Pricing helpers (computed values, never stored) ────────────────────────
+// ── Pricing helpers ────────────────────────────────────────────────────────
 
 export const BUNDLE_MONTHLY_EUR = { leader: 42, profi: 58, top_feature: 80 } as const;
 
@@ -205,151 +272,11 @@ export function monthlyRate(l: Lead): number {
 }
 
 export function totalContractValue(l: Lead): number {
-  const term = l.preferred_term_months ?? 60;
-  return monthlyRate(l) * term;
+  return monthlyRate(l) * (l.preferred_term_months ?? 60);
 }
 
-/** Est. pipeline value per lead — rough indicator while we still don't know the mix.
- *  Falls back to num_units × 42 × 60 when Kate hasn't filled bundles yet. */
 export function estPipelineValue(l: Lead): number {
   const fromMix = totalContractValue(l);
   if (fromMix > 0) return fromMix;
-  const units = l.num_units ?? 0;
-  return units * BUNDLE_MONTHLY_EUR.profi * 60;
-}
-
-// ── Seed — 10 real senior-living operators (mock person data) ─────────────
-
-function buildSeedLeads(): Lead[] {
-  const now = new Date().toISOString();
-  const seeds: Omit<Lead, "id" | "created_at" | "updated_at" | "stage">[] = [
-    {
-      company_name: "Evangelische Heimstiftung GmbH", street: "Hackstraße 12", postal_code: "70190", city: "Stuttgart", url: "https://www.ev-heimstiftung.de/",
-      person_name: "Dr. Stefan Bürkle", person_role: "Leitung Einkauf", person_email: "s.buerkle@ev-heimstiftung.de",
-      signal_url: "https://www.bund.de/mock-tender/EHS-2026-07",
-      signal_summary: "Public tender for KfW-funded senior residence opening Stuttgart Q3 2026, approximately 120 residential units",
-      motivation_string: "optimize", score: 88,
-    },
-    {
-      company_name: "Pro Seniore Residenz Kempten", street: "Stiftskellerweg 43", postal_code: "87439", city: "Kempten", url: "https://kempten.pro-seniore.de/",
-      person_name: "Martina Hoffmann", person_role: "Hausleitung", person_email: "m.hoffmann@pro-seniore.com",
-      signal_url: "https://mock-bauportal.de/permits/kempten-sued-2026",
-      signal_summary: "Renovation permit granted for Pro Seniore Kempten-Süd, 45 apartments, construction start Q4 2026",
-      motivation_string: "simplify", score: 76,
-    },
-    {
-      company_name: "Dorea GmbH", street: "Siemensdamm 62", postal_code: "13627", city: "Berlin", url: "https://www.dorea.de/",
-      person_name: "Andreas Richter", person_role: "Geschäftsführer", person_email: "a.richter@dorea.de",
-      signal_url: "https://mock-care-invest.de/news/dorea-expansion-2026",
-      signal_summary: "Press release: Dorea announcing three new assisted-living sites across Berlin-Brandenburg region",
-      motivation_string: "scale", score: 82,
-    },
-    {
-      company_name: "DOMIZILIUM GmbH", street: "Wilhelm-Köhler-Straße 50", postal_code: "86956", city: "Schongau", url: "https://www.domizilium.de/",
-      person_name: "Julia Schwarz", person_role: "Einrichtungsleitung", person_email: "j.schwarz@domizilium.de",
-      signal_url: "https://mock-bauportal.de/permits/schongau-bw-2026",
-      signal_summary: "Building permit granted for new betreutes Wohnen complex in Schongau, 60 residential units",
-      motivation_string: "simplify", score: 79,
-    },
-    {
-      company_name: "AWO Arbeiterwohlfahrt", street: "Blücherstraße 62/63", postal_code: "10961", city: "Berlin", url: "https://www.awo.org/",
-      person_name: "Thomas Weber", person_role: "Regionalleitung", person_email: "t.weber@awo.org",
-      signal_url: "https://mock-vergabeportal.de/tender/AWO-BE-2026-41",
-      signal_summary: "Öffentliche Ausschreibung for household-appliance leasing across 5 AWO senior residences, approximately 200 units",
-      motivation_string: "scale", score: 74,
-    },
-    {
-      company_name: "BRK SeniorenWohnen", street: "Garmischer Straße 19-21", postal_code: "81373", city: "München", url: "https://www.brk-seniorenwohnen.de/",
-      person_name: "Dr. Christine Bauer", person_role: "Leitung Hauswirtschaft", person_email: "c.bauer@brk-seniorenwohnen.de",
-      signal_url: "https://mock-brk.de/news/serienrenovierung-muenchen-2026-2028",
-      signal_summary: "Serial renovation plan for Munich region 2026–2028: 8 senior homes, approximately 400 residential units with appliance refresh",
-      motivation_string: "simplify", score: 91,
-    },
-    {
-      company_name: "Tertianum Service GmbH", street: "Hackescher Markt 2-3", postal_code: "10178", city: "Berlin", url: "https://tertianum-premiumresidences.de/",
-      person_name: "Michael Krause", person_role: "Prokurist", person_email: "m.krause@tertianum-premiumresidences.de",
-      signal_url: "https://mock-immobilien-zeitung.de/news/tertianum-mitte-opening",
-      signal_summary: "Opening announcement for new Tertianum Premium Residence Berlin-Mitte, projected Q2 2027",
-      motivation_string: "optimize", score: 68,
-    },
-    {
-      company_name: "Caritas Trägergesellschaft St. Elisabeth gGmbH", street: "Von-Hompesch-Straße 1", postal_code: "53123", city: "Bonn", url: "https://www.cts-mbh.de/",
-      person_name: "Petra Müller", person_role: "Leitung Einkauf", person_email: "p.mueller@cts-mbh.de",
-      signal_url: "https://mock-bundesanzeiger.de/jahresabschluss/CTS-2025",
-      signal_summary: "Annual report 2025 mentions appliance refresh across senior-care facilities in 2026, specific budget line allocated",
-      motivation_string: "optimize", score: 85,
-    },
-    {
-      company_name: "EMVIA Living GmbH", street: "Aachener Straße 1053-1055", postal_code: "50858", city: "Köln", url: "https://www.emvia.de/",
-      person_name: "Frank Schmidt", person_role: "Geschäftsführer", person_email: "f.schmidt@emvia.de",
-      signal_url: "https://mock-care-invest.de/news/emvia-acquisition-q1-2026",
-      signal_summary: "Acquisition of two smaller care operators announced; appliance harmonization across acquired sites planned",
-      motivation_string: "scale", score: 70,
-    },
-    {
-      company_name: "Augustinum Gruppe", street: "Stiftsbogen 74", postal_code: "81375", city: "München", url: "https://www.augustinum.de/",
-      person_name: "Sabine Fischer", person_role: "Hausleitung", person_email: "s.fischer@augustinum.de",
-      signal_url: "https://mock-augustinum.de/news/jubilaeum-refurbishment-2026",
-      signal_summary: "50th-anniversary refurbishment project across Munich residences: 180 apartments scheduled for renewal 2026–2027",
-      motivation_string: "simplify", score: 87,
-    },
-  ];
-  const leads = seeds.map<Lead>((s, i) => ({
-    id: `L-${1000 + i + 1}`,
-    created_at: now,
-    updated_at: now,
-    stage: "new" as Stage,
-    ...s,
-  }));
-
-  // Demo boost — one lead already qualified + one already offered so the
-  // cockpit looks alive before any call has run. Both are flagged with
-  // consent so the pipeline KPIs render sensibly.
-
-  // DOMIZILIUM GmbH (index 3) — fully qualified, awaiting Otto
-  leads[3] = {
-    ...leads[3],
-    stage: "qualified",
-    person_phone: "+49 8861 234 56 70",
-    consent_given_at: now,
-    consent_text_version: "v1.0",
-    consent_ip: "demo-seed",
-    facility_type: "assisted_living",
-    num_units: 60,
-    timeline: "Q3 2026",
-    preferred_term_months: 60,
-    decision_maker: "Julia Schwarz, Einrichtungsleitung",
-    bundle_leader: 20,
-    bundle_profi: 40,
-    bundle_top_feature: 0,
-    opt_in: true,
-    preferred_channel: "email",
-    contact_address: "j.schwarz@domizilium.de",
-    call_notes: "Wants Serie 6 for premium wing, Leader for staff apartments. Decision Q2.",
-  };
-
-  // Augustinum Gruppe (index 9) — offer already sent
-  leads[9] = {
-    ...leads[9],
-    stage: "offered",
-    person_phone: "+49 89 723 48 42",
-    consent_given_at: now,
-    consent_text_version: "v1.0",
-    consent_ip: "demo-seed",
-    facility_type: "senior_care",
-    num_units: 180,
-    timeline: "2026-2027 rollout",
-    preferred_term_months: 72,
-    decision_maker: "Sabine Fischer, Hausleitung",
-    bundle_leader: 0,
-    bundle_profi: 140,
-    bundle_top_feature: 40,
-    opt_in: true,
-    preferred_channel: "email",
-    contact_address: "s.fischer@augustinum.de",
-    call_notes: "Jubilee refurb — quiet premium washers important, Serie 8 for common areas.",
-    offer_sent_at: now,
-  };
-
-  return leads;
+  return (l.num_units ?? 0) * BUNDLE_MONTHLY_EUR.profi * 60;
 }

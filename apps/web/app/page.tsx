@@ -160,7 +160,8 @@ export default function Cockpit() {
   const kpis = {
     total: leads.length,
     pipeline: leads.filter((l) => ["new", "qualified", "offered"].includes(l.stage)).length,
-    qualified: leads.filter((l) => l.stage === "qualified" || l.stage === "offered").length,
+    qualified: leads.filter((l) => l.stage === "qualified").length,
+    offered: leads.filter((l) => l.stage === "offered").length,
     closed: leads.filter((l) => l.stage === "accepted").length,
     escalated: leads.filter(isEscalated).length,
     pipelineValue: leads
@@ -181,7 +182,7 @@ export default function Cockpit() {
             <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
             Agents live
           </span>
-          <span>{new Date().toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" })} CET</span>
+          <span suppressHydrationWarning>{new Date().toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" })} CET</span>
         </div>
       </header>
 
@@ -191,12 +192,12 @@ export default function Cockpit() {
           {[
             { label: "Active leads", value: kpis.pipeline, color: "#0071e3" },
             { label: "Qualified", value: kpis.qualified, color: "#af52de" },
+            { label: "Offer sent", value: kpis.offered, color: "#ff9500" },
             { label: "Deals closed", value: kpis.closed, color: "#34c759" },
-            { label: "Escalated", value: kpis.escalated, color: "#ff9500" },
             { label: "Est. pipeline value", value: `€${(kpis.pipelineValue / 1000).toFixed(0)}k`, color: "#1d1d1f" },
           ].map((k) => (
             <div key={k.label} className="bg-white rounded-2xl border border-black/5 shadow-sm p-4">
-              <div className="text-[28px] font-semibold leading-none tabular-nums" style={{ color: k.color }}>{k.value}</div>
+              <div className="text-[28px] font-semibold leading-none tabular-nums" style={{ color: k.color }} suppressHydrationWarning>{k.value}</div>
               <div className="text-[11px] text-neutral-400 mt-1">{k.label}</div>
             </div>
           ))}
@@ -209,7 +210,7 @@ export default function Cockpit() {
             return (
               <div key={col.key} className="space-y-3">
                 <div className="flex items-center gap-2">
-                  <div className="w-2 h-2 rounded-full" style={{ background: col.accent }} />
+                  <div className="w-2 h-2 rounded-full" style={{ background: col.accent }} suppressHydrationWarning />
                   <span className="text-[11px] font-medium text-neutral-500 uppercase tracking-wide">{col.label}</span>
                   <span className="ml-auto text-[11px] text-neutral-400">{colLeads.length}</span>
                 </div>
@@ -275,7 +276,7 @@ function LeadCard({ lead, accent, qualifying, onQualify, onOpen }: {
           <div className="text-[13px] font-semibold leading-tight">{lead.company_name}</div>
           <div className="text-[11px] text-neutral-400 mt-0.5">{[lead.street, lead.city].filter(Boolean).join(" · ")}</div>
         </div>
-        <div className="w-2 h-2 rounded-full mt-1 shrink-0" style={{ background: SCORE_COLOR[tier] }} title={`Score tier: ${tier}`} />
+        <div className="w-2 h-2 rounded-full mt-1 shrink-0" style={{ background: SCORE_COLOR[tier] }} title={`Score tier: ${tier}`} suppressHydrationWarning />
       </div>
       <div className="flex items-center gap-3 text-[11px] text-neutral-500">
         {lead.num_units !== undefined && <><span>{lead.num_units} units</span><span>·</span></>}
@@ -291,6 +292,7 @@ function LeadCard({ lead, accent, qualifying, onQualify, onOpen }: {
         <div
           className="text-[10px] rounded px-2 py-1 truncate text-white"
           style={{ background: MOTIVATION_COLOR[lead.motivation_string] }}
+          suppressHydrationWarning
         >
           Hook: {lead.motivation_string}
         </div>
@@ -310,6 +312,7 @@ function LeadCard({ lead, accent, qualifying, onQualify, onOpen }: {
           disabled={qualifying}
           className="w-full text-[12px] font-medium py-1.5 rounded-lg text-white transition-opacity disabled:opacity-50"
           style={{ background: accent }}
+          suppressHydrationWarning
         >
           {qualifying ? "Calling…" : "Qualify now →"}
         </button>

@@ -36,17 +36,42 @@
  * If HappyRobot emits the payload as a JSON string in `extracted`, we parse it.
  */
 import { NextRequest, NextResponse } from "next/server";
-import { getLeadById, updateLeadStage, appendAudit, type Lead, type Stage } from "@/lib/db";
+import { getLeadById, getLeadByPhone, updateLeadStage, appendAudit, type Lead, type Stage } from "@/lib/db";
+
+const OTTO_WEBHOOK = process.env.HAPPYROBOT_OTTO_WEBHOOK_URL ?? "";
+const OTTO_API_KEY = process.env.OTTO_API_KEY ?? "";
+const HAPPYROBOT_API_KEY = process.env.HAPPYROBOT_API_KEY ?? "";
+const EVENTS_URL = process.env.EVENTS_URL ?? "";
 
 export async function POST(req: NextRequest) {
+  console.log("\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+  console.log("📞 [POST /api/callback] — Kate (Caller) call-ended webhook");
+  console.log("   Purpose: receives Kate's call result → updates lead → triggers Otto");
+  console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+
   const body = await req.json().catch(() => null);
-  if (!body) return NextResponse.json({ error: "invalid body" }, { status: 400 });
+  if (!body) {
+    console.log("❌ [/api/callback] 400 — NOT CONNECTED: request body is not valid JSON");
+    return NextResponse.json({ error: "invalid body" }, { status: 400 });
+  }
+  console.log("📥 [/api/callback] Body received:", JSON.stringify(body, null, 2));
 
-  const lead_id: string = body.contact_id ?? body.lead_id ?? "";
-  if (!lead_id) return NextResponse.json({ error: "contact_id required" }, { status: 400 });
+  const raw_id: string = body.contact_id ?? body.lead_id ?? "";
+  console.log(`🔍 [/api/callback] Looking up lead: contact_id="${body.contact_id}" | lead_id="${body.lead_id}" | phone="${body.to}"`);
 
-  const lead = getLeadById(lead_id);
-  if (!lead) return NextResponse.json({ error: "lead not found" }, { status: 404 });
+  // Primary: look up by our lead_id / contact_id
+  // Fallback: look up by phone number (HR sends "to" field reliably)
+  const lead = (raw_id ? await getLeadById(raw_id) : undefined)
+    ?? await getLeadByPhone(body.to ?? "");
+
+  if (!lead) {
+    console.log(`❌ [/api/callback] 404 — Lead not found. raw_id="${raw_id}", to="${body.to}"`);
+    return NextResponse.json({ error: "lead not found", received_id: raw_id, received_to: body.to }, { status: 404 });
+  }
+  console.log(`✅ [/api/callback] Lead found: id="${lead.id}", company="${lead.company_name}", current stage="${lead.stage}"`);
+
+  // Always use the DB lead's actual ID (phone fallback may have resolved it)
+  const lead_id = lead.id;
 
   // Unwrap extracted JSON blob if present
   let extracted: Record<string, unknown> = {};
@@ -54,8 +79,9 @@ export async function POST(req: NextRequest) {
     try {
       const raw = body.extracted.trim().replace(/^```json|^```|```$/g, "").trim();
       extracted = JSON.parse(raw);
+      console.log("📦 [/api/callback] Unpacked 'extracted' JSON blob from HappyRobot");
     } catch {
-      /* ignore */
+      console.log("⚠️  [/api/callback] Could not parse 'extracted' — skipping");
     }
   }
   const m: Record<string, unknown> = { ...extracted, ...body };
@@ -70,12 +96,19 @@ export async function POST(req: NextRequest) {
   const bundleTopFeature = Number(m.bundle_top_feature ?? 0);
   const numUnits = Number(m.num_units ?? bundleLeader + bundleProfi + bundleTopFeature);
 
+  console.log(`📊 [/api/callback] Call results:`);
+  console.log(`   opt_in=${optIn} | call_outcome="${callOutcome}" | escalate=${escalate}`);
+  console.log(`   bundles → leader=${bundleLeader}, profi=${bundleProfi}, top_feature=${bundleTopFeature} (total units=${numUnits})`);
+  console.log(`   channel="${m.preferred_channel}" | contact_address="${m.contact_address}"`);
+
   // Map call outcome → pipeline stage
   let nextStage: Stage = lead.stage;
   if (callOutcome === "homologation_fail") nextStage = "homologation_fail";
   else if (escalate || escalationReason) nextStage = "escalated";
   else if (optIn) nextStage = "qualified";
   else nextStage = "not_interested";
+
+  console.log(`🔀 [/api/callback] Stage transition: "${lead.stage}" → "${nextStage}"`);
 
   const patch: Partial<Lead> = {
     facility_type: m.facility_type ? String(m.facility_type) : undefined,
@@ -106,8 +139,51 @@ export async function POST(req: NextRequest) {
       ...patch,
     },
   });
+  console.log(`📝 [/api/callback] Audit entry "kate.call_ended" saved`);
 
-  updateLeadStage(lead_id, nextStage, patch);
+  await updateLeadStage(lead_id, nextStage, patch);
+  console.log(`💾 [/api/callback] Lead "${lead_id}" updated in DB. New stage: "${nextStage}"`);
 
+  // Fire Otto if prospect opted in and passed homologation
+  if (optIn && callOutcome === "qualified") {
+    if (OTTO_WEBHOOK) {
+      const ottoPayload = { lead_id };
+
+      console.log(`🚀 [/api/callback] opt_in=true + outcome=qualified → firing Otto`);
+      console.log(`   → POST ${OTTO_WEBHOOK}`);
+      console.log(`   → Header x-api-key present: ${!!OTTO_API_KEY}`);
+      console.log(`   → Body:`, JSON.stringify(ottoPayload));
+
+      fetch(OTTO_WEBHOOK, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(OTTO_API_KEY ? { "x-api-key": OTTO_API_KEY } : {}),
+        },
+        body: JSON.stringify(ottoPayload),
+      }).then(async (r) => {
+        console.log(`   Otto responded: ${r.status} ${r.statusText}`);
+        if (!r.ok) console.log(`   ⚠️  Otto returned error: ${await r.text()}`);
+        else console.log(`   ✅ Otto accepted the task for lead "${lead_id}"`);
+      }).catch((err) => {
+        console.log(`   ❌ Otto unreachable (network error): ${err?.message ?? err}`);
+      });
+
+      appendAudit({
+        timestamp: new Date().toISOString(),
+        agent: "orchestrator",
+        event: "orchestrator.otto_triggered",
+        leadId: lead_id,
+        meta: { reason: "opt_in=true after Kate call" },
+      });
+    } else {
+      console.log(`⚠️  [/api/callback] opt_in=true but HAPPYROBOT_OTTO_WEBHOOK_URL is not set → Otto NOT fired`);
+    }
+  } else {
+    console.log(`ℹ️  [/api/callback] Otto not triggered: opt_in=${optIn}, outcome="${callOutcome}"`);
+  }
+
+  console.log(`✅ [/api/callback] Done. Response: { ok: true, lead_id: "${lead_id}", stage: "${nextStage}", opt_in: ${optIn} }`);
+  console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n");
   return NextResponse.json({ ok: true, lead_id, stage: nextStage, opt_in: optIn });
 }
