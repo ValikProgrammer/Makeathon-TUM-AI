@@ -1,67 +1,120 @@
 {
-  "version": "1.0",
-  "description": "Six mandatory BSH envelope fields. Exact names, types and validation. Freeze in hour 1.",
+  "version": "2.0",
+  "description": "Kate's qualification envelope — fields extracted from the voice transcript and written into the `leads` table. Freeze in hour 1; every downstream consumer (Otto, cockpit, Twin schema) depends on this.",
 
   "fields": [
     {
-      "id": "usage_type",
-      "label": "Usage Type",
-      "label_de": "Nutzungsart",
-      "type": "enum",
-      "values": ["residential", "commercial"],
+      "id": "homologation_gate_passed",
+      "label": "Homologation gate",
+      "type": "boolean",
       "required": true,
-      "icp_gate": true,
-      "note": "MUST be 'residential'. If 'commercial' → end call immediately, do not create offer.",
-      "extract_prompt": "Is the kitchen usage residential (in-unit apartment kitchens, shared kitchens for residents) or commercial (catering, central kitchen for staff)?"
+      "note": "Derived from Kate's Step 1 gate. `true` = per-unit residential or small shared kitchen. `false` = central cafeteria / industrial laundry → Kate ends the call as `homologation_fail`.",
+      "extract_prompt": "Based on the call, is this deployment household-typical (per-unit residential OR small shared kitchen serving up to 12 residents)? Return true/false."
     },
     {
       "id": "facility_type",
-      "label": "Facility Type",
-      "label_de": "Einrichtungstyp",
+      "label": "Facility type",
       "type": "enum",
-      "values": ["senior_care", "assisted_living", "dementia_ward", "residential_home", "supported_living", "other_residential"],
+      "values": ["senior_care", "assisted_living", "dementia_ward", "student_housing", "serviced_apartments", "hospital", "other_residential"],
       "required": true,
-      "extract_prompt": "What type of senior-living or care facility is this? (e.g. full in-patient care, assisted living, dementia ward)"
+      "extract_prompt": "What type of facility is this? Senior care home, assisted living, dementia ward, student housing, serviced apartments, hospital, or other residential?"
     },
     {
       "id": "num_units",
-      "label": "Number of Residential Units",
-      "label_de": "Anzahl Wohneinheiten",
+      "label": "Number of residential units",
       "type": "integer",
       "min": 10,
       "max": 300,
       "required": true,
-      "extract_prompt": "How many residential units or apartments does the facility have?"
+      "extract_prompt": "How many residential units, rooms, or apartments are we talking about? Should equal or approximate the sum of bundle quantities."
     },
     {
       "id": "timeline",
-      "label": "Decision / Installation Timeline",
-      "label_de": "Entscheidungs- / Installationszeitraum",
+      "label": "Decision / installation timeline",
       "type": "string",
       "examples": ["Q3 2026", "within 6 months", "2027", "immediate"],
       "required": true,
-      "extract_prompt": "When is the facility planning to make the purchasing decision or have new appliances installed?"
+      "extract_prompt": "When does the facility need the appliances in place?"
     },
     {
-      "id": "budget_range",
-      "label": "Budget Range (monthly lease, EUR)",
-      "label_de": "Budgetrahmen (monatliche Miete, EUR)",
+      "id": "preferred_term_months",
+      "label": "Preferred rental term",
       "type": "enum",
-      "values": ["<500", "500-2000", "2000-5000", "5000-10000", ">10000", "unknown"],
-      "required": true,
-      "extract_prompt": "Does the facility have a rough monthly budget in mind for kitchen appliance rental? Even a ballpark helps."
+      "values": [36, 48, 60, 72, 84],
+      "required": false,
+      "default": 60,
+      "extract_prompt": "What rental term did the prospect prefer? Default 60 months if unspecified."
     },
     {
       "id": "decision_maker",
-      "label": "Decision Maker Name & Role",
-      "label_de": "Entscheider Name & Rolle",
+      "label": "Decision maker name and role",
       "type": "string",
       "examples": ["Dr. Maria Schmidt, Managing Director", "Thomas Bauer, Facility Manager"],
       "required": true,
-      "extract_prompt": "Who is the person who will ultimately sign off on this purchase — their name and role?"
+      "extract_prompt": "Who will ultimately sign off on this purchase? Name and role."
+    },
+    {
+      "id": "bundle_leader",
+      "label": "Leader units (Good)",
+      "type": "integer",
+      "min": 0,
+      "required": true,
+      "extract_prompt": "How many Leader-package units did the prospect want? 0 if none."
+    },
+    {
+      "id": "bundle_profi",
+      "label": "Profi units (Better)",
+      "type": "integer",
+      "min": 0,
+      "required": true,
+      "extract_prompt": "How many Profi-package units did the prospect want? 0 if none."
+    },
+    {
+      "id": "bundle_top_feature",
+      "label": "Top Feature units (Best)",
+      "type": "integer",
+      "min": 0,
+      "required": true,
+      "extract_prompt": "How many Top Feature package units did the prospect want? 0 if none."
+    },
+    {
+      "id": "opt_in",
+      "label": "Opt-in for proposal",
+      "type": "boolean",
+      "required": true,
+      "extract_prompt": "Did the prospect opt in to receive the tailored proposal? true / false."
+    },
+    {
+      "id": "preferred_channel",
+      "label": "Preferred delivery channel",
+      "type": "enum",
+      "values": ["email", "whatsapp", "phone", null],
+      "required": false,
+      "extract_prompt": "Which channel did the prospect pick for the proposal — email, whatsapp, or phone? Null if not asked."
+    },
+    {
+      "id": "contact_address",
+      "label": "Contact address (email / whatsapp number)",
+      "type": "string",
+      "required": false,
+      "extract_prompt": "If opt_in is true: the email address or WhatsApp number where Otto should send the offer."
+    },
+    {
+      "id": "call_notes",
+      "label": "Free-text notes",
+      "type": "string",
+      "required": false,
+      "extract_prompt": "Anything else worth noting — mentioned competitors, existing suppliers, timing caveats, etc."
+    },
+    {
+      "id": "escalation_reason",
+      "label": "Escalation reason",
+      "type": "string",
+      "required": false,
+      "extract_prompt": "If the call should be escalated to a human colleague, why? Null if no escalation."
     }
   ],
 
-  "completeness_threshold": 0.8,
-  "note": "Completeness = filled_required_fields / total_required_fields. Otto requires ≥ 0.8 to generate draft."
+  "completeness_threshold": 0.7,
+  "note": "Completeness = filled_required_fields / total_required_fields. Otto requires >= 0.7 to generate the proposal. Bundle quantities may be zero but must all be present."
 }

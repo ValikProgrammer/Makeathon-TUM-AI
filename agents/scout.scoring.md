@@ -220,15 +220,15 @@ Diakonie operator publishes tender for new cafeteria kitchen in senior-residence
 
 ---
 
-## Hook Selection — which value angle to lead with
+## Motivation selection — which value angle to lead with
 
-Once a lead clears the scoring and the homologation gate, Jack also picks the **hook** — the value proposition the postcard and landing page lead with. The four hooks mirror BSH's own positioning (`Simplify · Scale · Optimize · Repeat/Circular`).
+Once a lead clears the scoring and the homologation gate, Jack also picks the **motivation_string** — the value proposition the postcard and landing page lead with. This field is stored on `leads.motivation_string` and passed to Kate at call time. The four values mirror BSH's own positioning (`Simplify · Scale · Optimize · Repeat/Circular`).
 
-**Signals are not the selector.** A prospect with a DNK publication does not necessarily care most about sustainability — the publication may come from comms while the person reading the postcard wrangles broken dishwashers. Signals say *why now*; hook says *what they care about*.
+**Signals are not the selector.** A prospect with a DNK publication does not necessarily care most about sustainability — the publication may come from comms while the person reading the postcard wrangles broken dishwashers. Signals say *why now*; motivation says *what they care about*.
 
 ### Primary selector — decision-maker role
 
-| Role on the prospect side | → Hook |
+| Role on the prospect side | → motivation_string |
 |---|---|
 | Einrichtungsleitung · Facility Manager · Hausleitung · Betriebsleitung | **Simplify** — bundled service, one contract, one invoice |
 | CFO · Kaufmännische Leitung · Finanzvorstand · Controlling | **Optimize** — OpEx, balance sheet, cash flow |
@@ -237,7 +237,7 @@ Once a lead clears the scoring and the homologation gate, Jack also picks the **
 
 ### Secondary selector — organizational archetype (when role is ambiguous)
 
-| Archetype | Default hook |
+| Archetype | Default motivation_string |
 |---|---|
 | Steady-state operator (senior living, hospitals in operation) | Simplify |
 | Expansion phase (BTR, student-housing rollout, new builds) | Scale |
@@ -246,14 +246,14 @@ Once a lead clears the scoring and the homologation gate, Jack also picks the **
 
 ### Rule
 
-If both selectors agree → high confidence, lead with that hook.
+If both selectors agree → high confidence, lead with that motivation_string.
 If they disagree → role wins. Organizational archetype is the tie-breaker only when the role is unknown.
 
-Signals inform the **Context strip** on the landing page (*"We saw your new senior-residence permit was granted in Stuttgart…"*) — the "why now" text that makes the outreach feel specific. Never the hook.
+Signals inform the **Context strip** on the landing page (*"We saw your new senior-residence permit was granted in Stuttgart…"*) — the "why now" text that makes the outreach feel specific. Never the motivation.
 
-### Hook must be logged per lead
+### motivation_string must be logged per lead
 
-Every prospect record carries the chosen hook + the reason (role X or archetype Y). If Kate observes on the call that the customer's actual priority was different, she logs that back — the outcome loop eventually recalibrates role-to-hook mapping.
+Every prospect record carries the chosen `motivation_string` + the reason (role X or archetype Y). If Kate observes on the call that the customer's actual priority was different, she logs that back — the outcome loop eventually recalibrates role-to-motivation mapping.
 
 ---
 

@@ -1,26 +1,24 @@
 {
-  "version": "1.0",
-  "description": "AI disclosure sentences — legally required first utterance on every new channel (EU AI Act Art. 50 + §13 UWG).",
+  "version": "2.0",
+  "description": "AI disclosure sentence — legally required first utterance on every new channel (EU AI Act Art. 50). Recording is not used, so no recording-consent language.",
 
-  "disclosure_de": "Guten Tag, mein Name ist Kate, ich bin ein KI-Assistent von lease·a·kitchen. Dieses Gespräch wird aufgezeichnet. Möchten Sie fortfahren?",
+  "language": "en",
 
-  "disclosure_de_variants": [
-    "Hallo, hier ist Kate, eine KI von lease·a·kitchen. Ich weise Sie darauf hin, dass dieses Gespräch aufgezeichnet wird. Sind Sie einverstanden?",
-    "Guten Morgen, ich bin Kate, ein automatisierter KI-Assistent von lease·a·kitchen. Das Gespräch wird aufgezeichnet — ist das für Sie in Ordnung?"
-  ],
-
-  "opt_in_phrases_de": [
-    "Ja, bitte schicken Sie mir das Angebot",
-    "Ja, das klingt interessant, schicken Sie mir die Unterlagen",
-    "In Ordnung, per E-Mail ist mir recht"
-  ],
+  "disclosure_en": "Good afternoon, Mr./Ms. {last_name}. This is Kate — I'm an AI assistant from lease·a·kitchen.",
 
   "opt_in_phrases_en": [
-    "Yes, please send me the offer",
-    "Yes, that sounds interesting, send me the details",
-    "That's fine, email works for me"
+    "yes, please send me the offer",
+    "yes, that sounds interesting, send me the details",
+    "that's fine, email works for me",
+    "yes, please"
   ],
 
-  "recording_consent_required": true,
-  "legal_basis": "EU AI Act Art. 50 (AI disclosure), §13 UWG (recording consent), §7 UWG para. 2 no. 2 (B2B presumed consent via public signal)"
+  "ai_question_reply_en": "I'm an AI assistant — we wanted to be transparent about that from the start. Happy to keep helping, or I can connect you with a colleague.",
+
+  "privacy_reply_en": "Our privacy page is at lease-a-kitchen.de/privacy. I can have a colleague send it by email if helpful.",
+
+  "recording_consent_required": false,
+  "recording_enabled": false,
+
+  "legal_basis": "EU AI Act Art. 50 (AI disclosure). §7 UWG is not triggered because we only call prospects who opted in via the landing page."
 }

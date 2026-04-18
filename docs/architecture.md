@@ -69,7 +69,7 @@ Everything the user sees. Lives at `apps/web/`.
 
 **Routes:**
 - `/` — live feed (default), agent status pills, sidebar with guardrails + today's stats
-- `/pipeline` — Kanban view across stages: Signal / Qualifying / Qualified / Offered / DNC
+- `/pipeline` — Kanban view: Signal identified · Qualified · Offer sent · Closed · Archive (5 display columns collapse the 9-value `stage` enum)
 - `/escalations` — queue of human-required leads
 - `/audit` — append-only log of every agent decision
 - `/lead/[id]` — detail view with signal, transcript, envelope
@@ -119,41 +119,83 @@ Responsibilities:
 
 ## Data shapes (the minimum)
 
-```typescript
-type Lead = {
-  id: string;               // "L-1048"
-  org: string;              // "Caritas Freiburg"
-  facility: string;
-  units: number;
-  city: string;
-  stage: "signal" | "calling" | "qualified" | "offered" | "dnc";
-  signal: { source: string; title: string; date: string; url: string };
-  contact: { name: string; role: string; phone: string };
-  fields: Partial<Envelope>;
-  optIn: boolean | null;
-  escalated?: boolean;
-  escalationReason?: string;
-};
+One flat table. See [`seed/scout-seed.sql`](../seed/scout-seed.sql) for the canonical DDL and [`docs/data-concept.md`](./data-concept.md) for column ownership.
 
-type Envelope = {
-  usage_type: "residential" | "commercial";   // must be residential
-  facility_type: string;
-  num_units: number;
-  timeline: string;
-  budget_range: string;
-  decision_maker: string;
+```typescript
+type Stage =
+  | "new"
+  | "qualified"
+  | "homologation_fail"
+  | "not_interested"
+  | "escalated"
+  | "offered"
+  | "accepted"
+  | "rejected"
+  | "suppressed";
+
+type MotivationString = "simplify" | "scale" | "optimize" | "circular";
+
+type Lead = {
+  id: string;
+  stage: Stage;
+  created_at: string;
+  updated_at: string;
+
+  // Company (Jack, real)
+  company_name: string;
+  street?: string;
+  postal_code?: string;
+  city?: string;
+  url?: string;
+
+  // Contact (Jack except phone)
+  person_name?: string;
+  person_role?: string;
+  person_email?: string;
+  person_phone?: string;          // captured on landing page, NOT by Jack
+
+  // Jack output
+  signal_url?: string;
+  signal_summary?: string;
+  motivation_string?: MotivationString;
+  score?: number;
+
+  // Consent (landing-page submit)
+  consent_given_at?: string;
+  consent_text_version?: string;
+  consent_ip?: string;
+
+  // Kate output
+  facility_type?: string;
+  num_units?: number;
+  timeline?: string;
+  preferred_term_months?: number;
+  decision_maker?: string;
+  bundle_leader?: number;
+  bundle_profi?: number;
+  bundle_top_feature?: number;
+  opt_in?: boolean;
+  preferred_channel?: "email" | "whatsapp" | "phone";
+  contact_address?: string;
+  call_transcript_url?: string;
+  call_notes?: string;
+  escalation_reason?: string;
+
+  // Otto output
+  offer_sent_at?: string;
+  offer_accepted_at?: string;
 };
 
 type AuditEntry = {
   timestamp: string;
   agent: "scout" | "caller" | "closer" | "guardrail" | "orchestrator";
-  event: string;            // "signal_matched", "icp_reject", "call_ended", ...
+  event: string;
   leadId?: string;
   meta?: Record<string, unknown>;
 };
 ```
 
-That's the contract. Keep it exactly this shape so frontend and backend people don't drift.
+That's the contract. Keep it exactly this shape so frontend and backend people don't drift. Nested `contact`, `signal`, and `envelope` objects from earlier iterations are gone — everything is flat columns on the single `leads` row.
 
 ## What's on HappyRobot vs. what's in our app
 
