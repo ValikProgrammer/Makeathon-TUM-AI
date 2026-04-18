@@ -120,7 +120,7 @@ export default function Cockpit() {
             { label: "Qualified", value: kpis.qualified, color: "#af52de" },
             { label: "Deals closed", value: kpis.closed, color: "#34c759" },
             { label: "Escalated", value: kpis.escalated, color: "#ff9500" },
-            { label: "Pipeline value", value: `€${(kpis.pipelineValue / 1000).toFixed(0)}k`, color: "#1d1d1f" },
+            { label: "Est. pipeline value", value: `€${(kpis.pipelineValue / 1000).toFixed(0)}k`, color: "#1d1d1f" },
           ].map((k) => (
             <div key={k.label} className="bg-white rounded-2xl border border-black/5 shadow-sm p-4">
               <div className="text-[28px] font-semibold leading-none tabular-nums" style={{ color: k.color }}>{k.value}</div>
@@ -207,7 +207,7 @@ function LeadCard({ lead, accent, qualifying, onQualify, onOpen }: {
         <span>{lead.units} units</span>
         <span>·</span>
         <span>{lead.city}</span>
-        <span className="ml-auto font-medium text-neutral-700">€{(lead.value / 1000).toFixed(0)}k</span>
+        <span className="ml-auto font-medium text-neutral-700" title="Estimated pipeline value — Otto will quote the exact monthly rate from the BSH catalog">~€{(lead.value / 1000).toFixed(0)}k est.</span>
       </div>
       {lead.signal && (
         <div className="text-[10px] text-blue-600 bg-blue-50 rounded px-2 py-1 truncate">{lead.signal.source}: {lead.signal.title}</div>

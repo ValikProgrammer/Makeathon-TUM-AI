@@ -6,7 +6,8 @@
     { "id": "R01", "field": "use_case_hints", "match": "keywords", "keywords": ["restaurant", "gastronomie", "gastro", "hotel", "catering", "kantine", "canteen", "mensa", "betriebsrestaurant", "corporate kitchen", "großküche", "industrial kitchen", "schulküche"], "reason": "commercial_kitchen" },
     { "id": "R02", "field": "size_units", "op": "lt", "value": 10, "reason": "too_small" },
     { "id": "R03", "field": "size_units", "op": "gt", "value": 300, "reason": "too_large_for_residential_appliances" },
-    { "id": "R04", "field": "entity_type", "match": "keywords", "keywords": ["university", "universität", "hochschule", "krankenhaus", "hospital", "prison", "gefängnis"], "reason": "wrong_entity_type" }
+    { "id": "R04", "field": "entity_type", "match": "keywords", "keywords": ["university", "universität", "hochschule", "prison", "gefängnis"], "reason": "wrong_entity_type", "note": "hospitals allowed — homologation gate (caller Step 1) rejects commercial-kitchen deployments case by case" },
+    { "id": "R05", "field": "signal_payload.description", "match": "keywords", "keywords": ["zentralküche", "cafeteria-küche", "großküche", "central kitchen", "central laundry", "industrial laundry", "kombidämpfer", "combi steamer", "kippbratpfanne", "tilt pan"], "reason": "commercial_kitchen_deployment", "note": "BSH homologation gate — appliances certified for household-typical use only" }
   ],
 
   "accept_tiers": {

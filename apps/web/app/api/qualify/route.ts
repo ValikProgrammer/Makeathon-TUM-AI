@@ -11,6 +11,31 @@ import { getLeadById, updateLeadStage, appendAudit, isDnc } from "@/lib/db";
 const HAPPYROBOT_CALLER_WEBHOOK = process.env.HAPPYROBOT_CALLER_WEBHOOK_URL ?? "";
 const HAPPYROBOT_API_KEY = process.env.HAPPYROBOT_API_KEY ?? "";
 
+type Hook = "simplify" | "scale" | "optimize" | "circular";
+
+/**
+ * Pick the BSH-aligned hook for the opener.
+ * Primary: decision-maker role (keyword match). Secondary: ICP tier as archetype tie-breaker.
+ * Never pick hook from ICP tier alone — see agents/scout.scoring.md §"Hook Selection".
+ */
+function pickHook(role: string | undefined, icp: "high" | "mid" | "low"): Hook {
+  const r = (role ?? "").toLowerCase();
+
+  // Primary: decision-maker role
+  if (/nachhaltigkeit|esg|sustainability|quality|compliance/.test(r)) return "circular";
+  if (/cfo|finanz|kaufmänn|controlling/.test(r))                      return "optimize";
+  if (/einrichtungsleitung|facility|hausleitung|betriebsleitung|hausmeister|ops|operations/.test(r)) return "simplify";
+  if (/geschäftsführ|ceo|managing director|projektentwickl|expansion|developer/.test(r))             return "scale";
+
+  // Secondary: archetype tie-breaker (when role is unknown or generic)
+  // high ICP → premium operator → default simplify (steady-state senior-living)
+  // mid  ICP → smaller / softer signal → optimize (budget discipline)
+  // low  ICP → opportunistic new build → scale
+  if (icp === "high") return "simplify";
+  if (icp === "mid")  return "optimize";
+  return "scale";
+}
+
 export async function POST(req: NextRequest) {
   const { lead_id } = await req.json().catch(() => ({}));
   if (!lead_id) return NextResponse.json({ error: "lead_id required" }, { status: 400 });
@@ -30,8 +55,9 @@ export async function POST(req: NextRequest) {
   // Trigger HappyRobot Caller workflow
   if (HAPPYROBOT_CALLER_WEBHOOK) {
     const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "";
-    // Pick hook based on ICP and available signal
-    const hook = lead.icp === "high" ? "simplify" : lead.icp === "mid" ? "optimize" : "scale";
+    // Pick hook based on decision-maker role (primary) with archetype fallback.
+    // Rule source: agents/scout.scoring.md — "Hook Selection".
+    const hook = pickHook(lead.contact?.role, lead.icp);
 
     const payload: Record<string, unknown> = {
       to: lead.contact?.phone ?? "",
