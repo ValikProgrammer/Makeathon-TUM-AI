@@ -1,0 +1,123 @@
+[
+  {
+    "id": "sig_20260418_0001",
+    "source": "TED",
+    "source_url": "https://ted.europa.eu/notice/123456-2026",
+    "captured_at": "2026-04-18T07:00:00Z",
+    "raw_title": "Ausstattung Wohnbereich — Seniorenresidenz Bad Cannstatt, 40 Wohneinheiten",
+    "signal_type": "tender",
+    "entity": { "name": "Diakonie Stuttgart gGmbH", "legal_form": "gGmbH", "address": "Bad Cannstatt, Stuttgart", "website": "https://diakonie-stuttgart.de" },
+    "signal_payload": { "description": "Tender for residential kitchen appliances, 40 senior apartments", "size_units": 40, "use_case_hints": ["residential", "assisted-living"], "timeline_hint": "Q3 2026", "budget_hint": null },
+    "icp_evaluation": { "decision": "accept", "tier": "high", "reason": "residential assisted-living, 40 units, EU tender", "rules_fired": ["whitelist:diakonie", "size:30-80", "signal:tender", "tier:high"] }
+  },
+  {
+    "id": "sig_20260418_0002",
+    "source": "Indeed",
+    "source_url": "https://de.indeed.com/job/123",
+    "captured_at": "2026-04-18T07:05:00Z",
+    "raw_title": "Facility Manager gesucht — Pflegeheim Caritas Freiburg, Neubau 68 Einheiten",
+    "signal_type": "job_post",
+    "entity": { "name": "Caritas Freiburg", "legal_form": "e.V.", "address": "Freiburg im Breisgau", "website": "https://caritas-freiburg.de" },
+    "signal_payload": { "description": "Facility Manager job for new 68-unit senior care home", "size_units": 68, "use_case_hints": ["senior-care", "residential"], "timeline_hint": "Q4 2026", "budget_hint": null },
+    "icp_evaluation": { "decision": "accept", "tier": "high", "reason": "residential senior-care, 68 units, strong signal", "rules_fired": ["whitelist:caritas", "size:30-80", "signal:job_post", "tier:high"] }
+  },
+  {
+    "id": "sig_20260418_0003",
+    "source": "DNK",
+    "source_url": "https://datenbank2.deutscher-nachhaltigkeitskodex.de/profile/awo-hannover",
+    "captured_at": "2026-04-18T07:10:00Z",
+    "raw_title": "DNK-Nachhaltigkeitsbericht 2025 — AWO Hannover, Haus am Park",
+    "signal_type": "esg_report",
+    "entity": { "name": "AWO Hannover", "legal_form": "gGmbH", "address": "Hannover", "website": "https://awo-hannover.de" },
+    "signal_payload": { "description": "ESG report mentions kitchen modernisation as 2026 CAPEX plan, 34 units", "size_units": 34, "use_case_hints": ["senior-living", "residential"], "timeline_hint": "2026", "budget_hint": "mid" },
+    "icp_evaluation": { "decision": "accept", "tier": "mid", "reason": "residential, 34 units, ESG report (softer signal)", "rules_fired": ["whitelist:awo", "size:30-80", "signal:esg_report", "tier:mid"] }
+  },
+  {
+    "id": "sig_20260418_0004",
+    "source": "BundDe",
+    "source_url": "https://www.bund.de/ausschreibung/987",
+    "captured_at": "2026-04-18T07:15:00Z",
+    "raw_title": "Küchengeräte für Wohnbereich — Johanniter Stift Cologne, Haus Lindenthal",
+    "signal_type": "tender",
+    "entity": { "name": "Johanniter Stift Cologne", "legal_form": "gGmbH", "address": "Cologne", "website": "https://johanniter.de" },
+    "signal_payload": { "description": "Public tender for residential kitchen appliances, 56 units", "size_units": 56, "use_case_hints": ["residential", "senior-living"], "timeline_hint": "Q2 2026", "budget_hint": null },
+    "icp_evaluation": { "decision": "accept", "tier": "high", "reason": "residential, 56 units, federal tender", "rules_fired": ["whitelist:johanniter", "size:30-80", "signal:tender", "tier:high"] }
+  },
+  {
+    "id": "sig_20260418_0005",
+    "source": "TED",
+    "source_url": "https://ted.europa.eu/notice/555-2026",
+    "captured_at": "2026-04-18T07:20:00Z",
+    "raw_title": "Küchengeräte Malteser Nuremberg, Haus St. Katharina — 44 Einheiten",
+    "signal_type": "tender",
+    "entity": { "name": "Malteser Nuremberg", "legal_form": "gGmbH", "address": "Nuremberg", "website": "https://malteser.de" },
+    "signal_payload": { "description": "Tender for kitchen appliances, senior residential home, 44 units", "size_units": 44, "use_case_hints": ["senior-care", "residential"], "timeline_hint": "H2 2026", "budget_hint": null },
+    "icp_evaluation": { "decision": "accept", "tier": "high", "reason": "residential, 44 units, EU tender", "rules_fired": ["whitelist:malteser", "size:30-80", "signal:tender", "tier:high"] }
+  },
+  {
+    "id": "sig_20260418_0006",
+    "source": "DNK",
+    "source_url": "https://datenbank2.deutscher-nachhaltigkeitskodex.de/profile/evangelische-stiftung-bonn",
+    "captured_at": "2026-04-18T07:25:00Z",
+    "raw_title": "DNK-Bericht Evangelische Stiftung Bonn — Haus am Rhein, 38 Einheiten",
+    "signal_type": "esg_report",
+    "entity": { "name": "Evangelische Stiftung Bonn", "legal_form": "Stiftung", "address": "Bonn", "website": "https://ev-stiftung-bonn.de" },
+    "signal_payload": { "description": "ESG report: kitchen equipment replacement planned 2026-2027, 38 residential units", "size_units": 38, "use_case_hints": ["assisted-living", "residential"], "timeline_hint": "2026-2027", "budget_hint": null },
+    "icp_evaluation": { "decision": "accept", "tier": "mid", "reason": "residential, 38 units, ESG report", "rules_fired": ["whitelist:evangelische-stiftung", "size:30-80", "signal:esg_report", "tier:mid"] }
+  },
+  {
+    "id": "sig_20260418_0007",
+    "source": "Indeed",
+    "source_url": "https://de.indeed.com/job/456",
+    "captured_at": "2026-04-18T07:30:00Z",
+    "raw_title": "Haustechnik Betreutes Wohnen — Paritätischer Essen, Wohnpark Ruhr",
+    "signal_type": "job_post",
+    "entity": { "name": "Paritätischer Essen", "legal_form": "gGmbH", "address": "Essen", "website": "https://paritaetischer-essen.de" },
+    "signal_payload": { "description": "Facility technician job, assisted-living renovation signal, 28 units", "size_units": 28, "use_case_hints": ["betreutes-wohnen", "residential"], "timeline_hint": "2026", "budget_hint": null },
+    "icp_evaluation": { "decision": "accept", "tier": "mid", "reason": "residential, 28 units (below sweet spot), job post signal", "rules_fired": ["whitelist:paritaetischer", "size:10-29", "signal:job_post", "tier:mid"] }
+  },
+  {
+    "id": "sig_20260418_0008",
+    "source": "BundDe",
+    "source_url": "https://www.bund.de/ausschreibung/222",
+    "captured_at": "2026-04-18T07:35:00Z",
+    "raw_title": "Küchengeräte Kreuzbund Leipzig — Haus Eichenblick, 46 Einheiten",
+    "signal_type": "tender",
+    "entity": { "name": "Kreuzbund Leipzig", "legal_form": "e.V.", "address": "Leipzig", "website": "https://kreuzbund-leipzig.de" },
+    "signal_payload": { "description": "Kitchen appliance tender for 46-unit senior residential home", "size_units": 46, "use_case_hints": ["residential", "senior-living"], "timeline_hint": "Q1 2026", "budget_hint": null },
+    "icp_evaluation": { "decision": "accept", "tier": "high", "reason": "residential, 46 units, federal tender", "rules_fired": ["whitelist:kreuzbund", "size:30-80", "signal:tender", "tier:high"] }
+  },
+  {
+    "id": "sig_20260418_0009",
+    "source": "TED",
+    "source_url": "https://ted.europa.eu/notice/777-2026",
+    "captured_at": "2026-04-18T07:40:00Z",
+    "raw_title": "Großküche Ausstattung Universitätsmensa München — 800 Mahlzeiten täglich",
+    "signal_type": "tender",
+    "entity": { "name": "Studierendenwerk München", "legal_form": "AöR", "address": "Munich", "website": "https://studierendenwerk-muenchen.de" },
+    "signal_payload": { "description": "Commercial kitchen equipment for university canteen, 800 meals/day", "size_units": null, "use_case_hints": ["mensa", "canteen", "commercial"], "timeline_hint": "2026", "budget_hint": null },
+    "icp_evaluation": { "decision": "reject", "tier": null, "reason": "commercial_kitchen — university canteen, not residential", "rules_fired": ["R01:mensa", "R01:canteen"] }
+  },
+  {
+    "id": "sig_20260418_0010",
+    "source": "BundDe",
+    "source_url": "https://www.bund.de/ausschreibung/333",
+    "captured_at": "2026-04-18T07:45:00Z",
+    "raw_title": "Küchenausstattung Betriebsrestaurant Siemens AG Campus — Catering 500 PAX",
+    "signal_type": "tender",
+    "entity": { "name": "Siemens AG Facility", "legal_form": "AG", "address": "Munich", "website": "https://siemens.com" },
+    "signal_payload": { "description": "Corporate restaurant kitchen, 500 PAX catering", "size_units": null, "use_case_hints": ["betriebsrestaurant", "catering", "gastro"], "timeline_hint": "Q2 2026", "budget_hint": null },
+    "icp_evaluation": { "decision": "reject", "tier": null, "reason": "commercial_kitchen — corporate catering, not residential senior-living", "rules_fired": ["R01:betriebsrestaurant", "R01:catering"] }
+  },
+  {
+    "id": "sig_20260418_0011",
+    "source": "Indeed",
+    "source_url": "https://de.indeed.com/job/789",
+    "captured_at": "2026-04-18T07:50:00Z",
+    "raw_title": "Chefkoch Hotel Bayerischer Hof — Großküche, 300 Couverts",
+    "signal_type": "job_post",
+    "entity": { "name": "Hotel Bayerischer Hof", "legal_form": "GmbH", "address": "Munich", "website": "https://bayerischerhof.de" },
+    "signal_payload": { "description": "Hotel chef job, commercial kitchen 300 covers", "size_units": null, "use_case_hints": ["hotel", "gastro", "großküche"], "timeline_hint": null, "budget_hint": null },
+    "icp_evaluation": { "decision": "reject", "tier": null, "reason": "commercial_kitchen — hotel gastronomy, not residential", "rules_fired": ["R01:hotel", "R01:gastronomie"] }
+  }
+]

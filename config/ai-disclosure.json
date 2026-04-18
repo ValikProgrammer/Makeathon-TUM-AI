@@ -1,0 +1,26 @@
+{
+  "version": "1.0",
+  "description": "AI disclosure sentences — legally required first utterance on every new channel (EU AI Act Art. 50 + §13 UWG).",
+
+  "disclosure_de": "Guten Tag, mein Name ist Kate, ich bin ein KI-Assistent von lease·a·kitchen. Dieses Gespräch wird aufgezeichnet. Möchten Sie fortfahren?",
+
+  "disclosure_de_variants": [
+    "Hallo, hier ist Kate, eine KI von lease·a·kitchen. Ich weise Sie darauf hin, dass dieses Gespräch aufgezeichnet wird. Sind Sie einverstanden?",
+    "Guten Morgen, ich bin Kate, ein automatisierter KI-Assistent von lease·a·kitchen. Das Gespräch wird aufgezeichnet — ist das für Sie in Ordnung?"
+  ],
+
+  "opt_in_phrases_de": [
+    "Ja, bitte schicken Sie mir das Angebot",
+    "Ja, das klingt interessant, schicken Sie mir die Unterlagen",
+    "In Ordnung, per E-Mail ist mir recht"
+  ],
+
+  "opt_in_phrases_en": [
+    "Yes, please send me the offer",
+    "Yes, that sounds interesting, send me the details",
+    "That's fine, email works for me"
+  ],
+
+  "recording_consent_required": true,
+  "legal_basis": "EU AI Act Art. 50 (AI disclosure), §13 UWG (recording consent), §7 UWG para. 2 no. 2 (B2B presumed consent via public signal)"
+}

@@ -1,0 +1,41 @@
+{
+  "version": "1.0",
+  "description": "BSH appliance pricing for lease·a·kitchen. Otto must not invent prices outside these ranges.",
+
+  "monthly_rate_per_unit_eur": 42,
+  "default_term_months": 60,
+  "commission_pct": 7,
+
+  "bundles": [
+    {
+      "id": "standard",
+      "label": "Standard Residential Unit",
+      "label_de": "Standard Wohneinheit",
+      "appliances": ["Bosch Serie 4 Fridge-Freezer", "Bosch Serie 2 Oven", "Bosch Serie 2 Hob", "Siemens Dishwasher"],
+      "monthly_eur": 42,
+      "purchase_equiv_eur": 3200
+    },
+    {
+      "id": "premium",
+      "label": "Premium Residential Unit",
+      "label_de": "Premium Wohneinheit",
+      "appliances": ["Bosch Serie 6 Fridge-Freezer", "Bosch Serie 6 Oven", "Bosch Serie 4 Induction Hob", "Siemens iQ500 Dishwasher", "Bosch Washing Machine"],
+      "monthly_eur": 58,
+      "purchase_equiv_eur": 4600
+    },
+    {
+      "id": "shared_kitchen",
+      "label": "Shared Kitchen (6–12 residents)",
+      "label_de": "Gemeinschaftsküche (6–12 Bewohner)",
+      "appliances": ["Bosch Serie 6 Fridge-Freezer xl2", "Bosch Commercial-grade Oven x2", "Bosch Induction Hob x2", "Siemens iQ700 Dishwasher"],
+      "monthly_eur": 95,
+      "purchase_equiv_eur": 7800
+    }
+  ],
+
+  "escalation_threshold_total_eur": 100000,
+  "note": "Deals above €100k total contract value must be escalated to human before offer is sent.",
+
+  "tco_formula": "monthly_rate × num_units × term_months",
+  "savings_formula": "purchase_equiv × num_units - tco"
+}

@@ -1,0 +1,302 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>lease·a·kitchen · Pitch</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+  html, body { height: 100%; overflow: hidden; }
+  body { font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  .monospace { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+  .slide { position: absolute; inset: 0; display: flex; opacity: 0; pointer-events: none; transition: opacity .3s ease; }
+  .slide.active { opacity: 1; pointer-events: auto; }
+  .pulse-dot { box-shadow: 0 0 0 0 rgba(34,197,94,.7); animation: pulse 2s infinite; }
+  @keyframes pulse {
+    0%   { box-shadow: 0 0 0 0 rgba(34,197,94,.7); }
+    70%  { box-shadow: 0 0 0 8px rgba(34,197,94,0); }
+    100% { box-shadow: 0 0 0 0 rgba(34,197,94,0); }
+  }
+  .kbd { font-family: ui-monospace, monospace; font-size: 11px; padding: 2px 6px; border: 1px solid #d4d4d4; border-bottom-width: 2px; border-radius: 4px; background: #fafafa; color: #525252; }
+</style>
+</head>
+<body class="bg-neutral-50 text-neutral-900">
+
+<div id="deck" class="relative w-screen h-screen">
+
+  <!-- 1 · Title -->
+  <section class="slide active bg-gradient-to-br from-neutral-900 to-neutral-800 text-white">
+    <div class="m-auto max-w-4xl px-12 text-center">
+      <div class="text-[11px] uppercase tracking-[0.3em] text-neutral-400 mb-8">TUM.ai Makeathon · HappyRobot Challenge</div>
+      <h1 class="text-7xl font-bold tracking-tight leading-none">No spam.<br/>High precision.</h1>
+      <p class="mt-10 text-2xl text-neutral-300 leading-relaxed">Three autonomous B2B sales agents.<br/>A human only when it matters.</p>
+      <div class="mt-16 flex items-center justify-center gap-6 text-sm text-neutral-400">
+        <span>Team <span class="text-white font-medium">undeterministic tornado</span></span>
+        <span>·</span>
+        <span>lease·a·kitchen</span>
+        <span>·</span>
+        <span>April 2026</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- 2 · Problem -->
+  <section class="slide bg-white">
+    <div class="m-auto max-w-5xl px-12">
+      <div class="text-[11px] uppercase tracking-[0.3em] text-neutral-500 mb-4">The problem</div>
+      <h2 class="text-5xl font-bold tracking-tight leading-tight mb-10">B2B outbound is broken.</h2>
+      <div class="grid grid-cols-3 gap-8">
+        <div class="border-l-2 border-red-400 pl-5">
+          <div class="text-5xl font-bold text-red-600 tracking-tight">&lt;1%</div>
+          <div class="mt-2 text-neutral-600 text-sm leading-snug">Cold email response rate. LinkedIn follows the same curve.</div>
+        </div>
+        <div class="border-l-2 border-red-400 pl-5">
+          <div class="text-5xl font-bold text-red-600 tracking-tight">30 min</div>
+          <div class="mt-2 text-neutral-600 text-sm leading-snug">Research + first-touch qualification per lead. Doesn't scale.</div>
+        </div>
+        <div class="border-l-2 border-red-400 pl-5">
+          <div class="text-5xl font-bold text-red-600 tracking-tight">§7 UWG</div>
+          <div class="mt-2 text-neutral-600 text-sm leading-snug">Cold-calling regulated. One careless campaign = abmahnung.</div>
+        </div>
+      </div>
+      <div class="mt-12 text-xl text-neutral-700 leading-relaxed max-w-3xl">
+        Meanwhile, buyers publish intent constantly —
+        <span class="font-medium text-neutral-900">tenders, building permits, sustainability reports, job posts</span> —
+        that no one converts into timely, relevant outreach.
+      </div>
+    </div>
+  </section>
+
+  <!-- 3 · Solution -->
+  <section class="slide bg-neutral-50">
+    <div class="m-auto max-w-6xl px-12 w-full">
+      <div class="text-[11px] uppercase tracking-[0.3em] text-neutral-500 mb-4">Our solution</div>
+      <h2 class="text-5xl font-bold tracking-tight leading-tight mb-12">Three agents. One purpose.</h2>
+
+      <div class="grid grid-cols-3 gap-6">
+        <div class="bg-white rounded-xl p-6 border border-neutral-200">
+          <div class="flex items-center gap-2 mb-4">
+            <span class="px-2 py-0.5 text-[10px] font-semibold tracking-wider uppercase text-white bg-blue-600 rounded">Scout</span>
+            <span class="w-2 h-2 rounded-full bg-emerald-500 pulse-dot"></span>
+          </div>
+          <h3 class="text-xl font-semibold mb-2">Only act on signals</h3>
+          <p class="text-sm text-neutral-600 leading-relaxed">Watches TED, DNK, public tenders 24/7. Creates a lead <em>only</em> with documented intent — never from a bought list.</p>
+        </div>
+
+        <div class="bg-white rounded-xl p-6 border border-neutral-200">
+          <div class="flex items-center gap-2 mb-4">
+            <span class="px-2 py-0.5 text-[10px] font-semibold tracking-wider uppercase text-white bg-amber-600 rounded">Caller</span>
+            <span class="w-2 h-2 rounded-full bg-emerald-500 pulse-dot"></span>
+          </div>
+          <h3 class="text-xl font-semibold mb-2">Voice with consent</h3>
+          <p class="text-sm text-neutral-600 leading-relaxed">AI voice agent discloses itself, references the signal as the reason to call, qualifies 6 fields, asks permission to follow up.</p>
+        </div>
+
+        <div class="bg-white rounded-xl p-6 border border-neutral-200">
+          <div class="flex items-center gap-2 mb-4">
+            <span class="px-2 py-0.5 text-[10px] font-semibold tracking-wider uppercase text-white bg-emerald-600 rounded">Closer</span>
+            <span class="w-2 h-2 rounded-full bg-neutral-300"></span>
+          </div>
+          <h3 class="text-xl font-semibold mb-2">Deliver only on opt-in</h3>
+          <p class="text-sm text-neutral-600 leading-relaxed">Sends the tailored offer via email or WhatsApp — only if the prospect explicitly asked for it. Escalates edge cases to a human.</p>
+        </div>
+      </div>
+
+      <div class="mt-10 flex items-center justify-center gap-3 text-sm text-neutral-500">
+        <span class="monospace">Signal</span>
+        <span>→</span>
+        <span class="monospace">Voice</span>
+        <span>→</span>
+        <span class="monospace">Permission</span>
+        <span>→</span>
+        <span class="monospace">Offer</span>
+        <span>→</span>
+        <span class="monospace font-semibold text-neutral-900">Human only on escalation</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- 4 · Demo -->
+  <section class="slide bg-white">
+    <div class="m-auto max-w-6xl px-12 w-full">
+      <div class="text-[11px] uppercase tracking-[0.3em] text-neutral-500 mb-4">Live demo</div>
+      <h2 class="text-5xl font-bold tracking-tight leading-tight mb-10">A cockpit, not a chatbot.</h2>
+
+      <div class="grid grid-cols-2 gap-10 items-center">
+        <div class="space-y-5 text-neutral-700">
+          <div class="flex gap-4">
+            <div class="monospace text-sm text-neutral-400 pt-0.5 w-6">01</div>
+            <div><span class="font-medium text-neutral-900">Scout rejects 3 commercial-kitchen signals.</span><br/><span class="text-sm">ICP is residential appliances only — we don't chase business we can't serve.</span></div>
+          </div>
+          <div class="flex gap-4">
+            <div class="monospace text-sm text-neutral-400 pt-0.5 w-6">02</div>
+            <div><span class="font-medium text-neutral-900">Caller picks up a signal-matched lead.</span><br/><span class="text-sm">Voice call starts. Transcript streams live into the cockpit.</span></div>
+          </div>
+          <div class="flex gap-4">
+            <div class="monospace text-sm text-neutral-400 pt-0.5 w-6">03</div>
+            <div><span class="font-medium text-neutral-900">6 envelope fields fill in real time.</span><br/><span class="text-sm">Usage, units, timeline, budget, decision-maker — extracted, not re-typed.</span></div>
+          </div>
+          <div class="flex gap-4">
+            <div class="monospace text-sm text-neutral-400 pt-0.5 w-6">04</div>
+            <div><span class="font-medium text-neutral-900">One lead escalates — human takes over.</span><br/><span class="text-sm">Budget unclear. Agent hands off with full context.</span></div>
+          </div>
+          <div class="flex gap-4">
+            <div class="monospace text-sm text-neutral-400 pt-0.5 w-6">05</div>
+            <div><span class="font-medium text-neutral-900">Closer sends the offer. Done.</span><br/><span class="text-sm">Only with opt-in. Everything logged, auditable, reversible.</span></div>
+          </div>
+        </div>
+
+        <div class="bg-neutral-900 text-white rounded-xl p-6 monospace text-xs leading-relaxed">
+          <div class="text-neutral-400 mb-2"># live cockpit · today</div>
+          <div><span class="text-emerald-400">scout</span>     signals_scanned     1,248</div>
+          <div><span class="text-red-400">guardrail</span> icp_reject           3    <span class="text-neutral-500">(commercial kitchens)</span></div>
+          <div><span class="text-emerald-400">scout</span>     leads_created        7</div>
+          <div><span class="text-amber-400">caller</span>    calls_made           4</div>
+          <div><span class="text-amber-400">caller</span>    opt_ins              3</div>
+          <div><span class="text-emerald-400">closer</span>    envelopes_sent       2</div>
+          <div><span class="text-neutral-500">human</span>     escalations          1    <span class="text-neutral-500">(budget unclear)</span></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 5 · Why it works -->
+  <section class="slide bg-neutral-50">
+    <div class="m-auto max-w-5xl px-12 w-full">
+      <div class="text-[11px] uppercase tracking-[0.3em] text-neutral-500 mb-4">Why this works</div>
+      <h2 class="text-5xl font-bold tracking-tight leading-tight mb-12">Built on HappyRobot + guardrails.</h2>
+
+      <div class="grid grid-cols-2 gap-8">
+        <div class="bg-white rounded-xl p-6 border border-neutral-200">
+          <div class="text-[11px] uppercase tracking-wider text-neutral-500 mb-2">HappyRobot delivers</div>
+          <ul class="space-y-2 text-sm text-neutral-700">
+            <li>✓ Native voice, SMS, WhatsApp, email</li>
+            <li>✓ Workflow engine with AI Extract, AI Classify</li>
+            <li>✓ Contacts + memory across channels</li>
+            <li>✓ Full transcripts + recordings + audit trail</li>
+          </ul>
+        </div>
+        <div class="bg-white rounded-xl p-6 border border-neutral-200">
+          <div class="text-[11px] uppercase tracking-wider text-neutral-500 mb-2">Our cockpit adds</div>
+          <ul class="space-y-2 text-sm text-neutral-700">
+            <li>✓ ICP filter — residential only, no commercial kitchens</li>
+            <li>✓ Signal requirement — no call without documented intent</li>
+            <li>✓ Escalation gates — deal size, unclear consent, edge cases</li>
+            <li>✓ DNC list — enforced, not optional</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="mt-10 grid grid-cols-3 gap-6 text-center">
+        <div>
+          <div class="text-3xl font-bold text-neutral-900">Autonomy</div>
+          <div class="text-sm text-neutral-500 mt-1">3 agents run 24/7 on heartbeats</div>
+        </div>
+        <div>
+          <div class="text-3xl font-bold text-neutral-900">Dashboard</div>
+          <div class="text-sm text-neutral-500 mt-1">Live transcripts · pipeline · audit</div>
+        </div>
+        <div>
+          <div class="text-3xl font-bold text-neutral-900">Outcome</div>
+          <div class="text-sm text-neutral-500 mt-1">BSH-ready envelope, not just a meeting</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 6 · Market & proof -->
+  <section class="slide bg-white">
+    <div class="m-auto max-w-5xl px-12 w-full">
+      <div class="text-[11px] uppercase tracking-[0.3em] text-neutral-500 mb-4">Reality check</div>
+      <h2 class="text-5xl font-bold tracking-tight leading-tight mb-10">Not a demo. A working business.</h2>
+
+      <div class="grid grid-cols-2 gap-10">
+        <div>
+          <div class="text-neutral-500 text-sm mb-4">The case we demo on:</div>
+          <div class="space-y-4">
+            <div class="flex items-start gap-4">
+              <div class="w-1 h-1 rounded-full bg-neutral-900 mt-3"></div>
+              <div>
+                <div class="font-semibold">Official BSH commercial-agent contract</div>
+                <div class="text-sm text-neutral-600">Since 01.03.2026 · 7% commission · no territorial limits</div>
+              </div>
+            </div>
+            <div class="flex items-start gap-4">
+              <div class="w-1 h-1 rounded-full bg-neutral-900 mt-3"></div>
+              <div>
+                <div class="font-semibold">12,000+ senior-living operators in Germany</div>
+                <div class="text-sm text-neutral-600">Diakonie, Caritas, AWO, private — real TAM</div>
+              </div>
+            </div>
+            <div class="flex items-start gap-4">
+              <div class="w-1 h-1 rounded-full bg-neutral-900 mt-3"></div>
+              <div>
+                <div class="font-semibold">Clear outcome</div>
+                <div class="text-sm text-neutral-600">Structured email to BSH with 6 mandatory fields → order</div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="bg-neutral-900 text-white rounded-xl p-6 flex flex-col justify-center">
+          <div class="text-[11px] uppercase tracking-[0.3em] text-neutral-400 mb-4">Beyond the demo</div>
+          <div class="text-lg leading-relaxed">
+            Germany has
+            <span class="font-bold text-white">700,000 commercial agents</span>
+            working alone. They don't need better CRMs — they need a team of AI colleagues that respects their customers.
+          </div>
+          <div class="mt-6 text-sm text-neutral-400">
+            Same three agents. Different product briefing. Same precision.
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 7 · Ask -->
+  <section class="slide bg-gradient-to-br from-neutral-900 to-neutral-800 text-white">
+    <div class="m-auto max-w-3xl px-12 text-center">
+      <div class="text-[11px] uppercase tracking-[0.3em] text-neutral-400 mb-6">Thank you</div>
+      <h2 class="text-6xl font-bold tracking-tight leading-none mb-10">One call away.</h2>
+      <p class="text-xl text-neutral-300 leading-relaxed mb-12">
+        We built the sales team that never spams —<br/>because every call traces back to a real signal.
+      </p>
+      <div class="flex items-center justify-center gap-6 text-sm">
+        <a class="px-5 py-2.5 bg-white text-neutral-900 rounded-full font-medium">Let's talk</a>
+      </div>
+      <div class="mt-20 text-xs text-neutral-500 monospace">
+        Team undeterministic tornado · Built in 48h on HappyRobot · TUM.ai Makeathon · April 2026
+      </div>
+    </div>
+  </section>
+
+</div>
+
+<!-- Navigation -->
+<div class="fixed bottom-6 left-1/2 -translate-x-1/2 flex items-center gap-4 bg-white/90 backdrop-blur px-4 py-2 rounded-full border border-neutral-200 shadow-sm">
+  <button id="prev" class="text-sm text-neutral-600 hover:text-neutral-900">‹</button>
+  <span id="counter" class="monospace text-xs text-neutral-500">1 / 7</span>
+  <button id="next" class="text-sm text-neutral-600 hover:text-neutral-900">›</button>
+  <span class="text-[10px] text-neutral-400 ml-2">Use <span class="kbd">←</span> <span class="kbd">→</span></span>
+</div>
+
+<script>
+  const slides = document.querySelectorAll('.slide');
+  const counter = document.getElementById('counter');
+  let i = 0;
+  function go(n) {
+    i = Math.max(0, Math.min(slides.length - 1, n));
+    slides.forEach((s, k) => s.classList.toggle('active', k === i));
+    counter.textContent = `${i + 1} / ${slides.length}`;
+  }
+  document.getElementById('next').onclick = () => go(i + 1);
+  document.getElementById('prev').onclick = () => go(i - 1);
+  document.addEventListener('keydown', e => {
+    if (e.key === 'ArrowRight' || e.key === ' ') go(i + 1);
+    if (e.key === 'ArrowLeft') go(i - 1);
+    if (e.key === 'Home') go(0);
+    if (e.key === 'End') go(slides.length - 1);
+  });
+</script>
+
+</body>
+</html>

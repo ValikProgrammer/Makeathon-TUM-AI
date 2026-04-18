@@ -1,0 +1,48 @@
+{
+  "version": "1.0",
+  "description": "ICP ruleset for lease·a·kitchen Scout agent. First matching REJECT rule wins.",
+
+  "reject_rules": [
+    { "id": "R01", "field": "use_case_hints", "match": "keywords", "keywords": ["restaurant", "gastronomie", "gastro", "hotel", "catering", "kantine", "canteen", "mensa", "betriebsrestaurant", "corporate kitchen", "großküche", "industrial kitchen", "schulküche"], "reason": "commercial_kitchen" },
+    { "id": "R02", "field": "size_units", "op": "lt", "value": 10, "reason": "too_small" },
+    { "id": "R03", "field": "size_units", "op": "gt", "value": 300, "reason": "too_large_for_residential_appliances" },
+    { "id": "R04", "field": "entity_type", "match": "keywords", "keywords": ["university", "universität", "hochschule", "krankenhaus", "hospital", "prison", "gefängnis"], "reason": "wrong_entity_type" }
+  ],
+
+  "accept_tiers": {
+    "high": {
+      "description": "Residential fit + strong signal + 30–80 units",
+      "conditions": {
+        "use_case_match": ["senior-living", "assisted-living", "betreutes-wohnen", "pflegeheim", "altenheim", "altenpflege", "seniorenresidenz", "dementia", "demenz"],
+        "signal_types": ["building_permit", "tender", "ted_europa", "bund_de"],
+        "size_min": 30,
+        "size_max": 80
+      }
+    },
+    "mid": {
+      "description": "Residential fit + softer signal OR outside sweet-spot size",
+      "conditions": {
+        "use_case_match": ["senior-living", "assisted-living", "betreutes-wohnen", "pflegeheim", "altenheim", "altenpflege", "seniorenresidenz", "dementia", "demenz"],
+        "signal_types": ["job_post", "esg_report", "dnk", "press_release"],
+        "size_min": 10,
+        "size_max": 29
+      }
+    },
+    "low": {
+      "description": "Residential fit but weak signal or size outside sweet spot (80–300)",
+      "conditions": {
+        "use_case_match": ["senior-living", "assisted-living", "betreutes-wohnen", "pflegeheim", "altenheim", "altenpflege"],
+        "size_min": 81,
+        "size_max": 300
+      }
+    }
+  },
+
+  "operator_whitelist_keywords": [
+    "diakonie", "caritas", "awo", "johanniter", "malteser", "paritätischer",
+    "evangelische stiftung", "kreuzbund", "lebenshilfe", "volkssolidarität",
+    "arbeiterwohlfahrt", "rotes kreuz", "drk", "diakoniewerk"
+  ],
+
+  "dedup_window_days": 30
+}

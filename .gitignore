@@ -1,0 +1,20 @@
+# Env
+.env
+.env.local
+apps/web/.env
+apps/web/.env.local
+
+# Next.js
+apps/web/.next/
+apps/web/out/
+
+# Node
+node_modules/
+apps/web/node_modules/
+
+# Runtime data (do not commit live leads/audit)
+apps/web/data/leads.json
+apps/web/data/audit.json
+
+# OS
+.DS_Store

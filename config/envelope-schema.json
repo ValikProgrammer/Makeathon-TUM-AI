@@ -1,0 +1,67 @@
+{
+  "version": "1.0",
+  "description": "Six mandatory BSH envelope fields. Exact names, types and validation. Freeze in hour 1.",
+
+  "fields": [
+    {
+      "id": "usage_type",
+      "label": "Usage Type",
+      "label_de": "Nutzungsart",
+      "type": "enum",
+      "values": ["residential", "commercial"],
+      "required": true,
+      "icp_gate": true,
+      "note": "MUST be 'residential'. If 'commercial' → end call immediately, do not create offer.",
+      "extract_prompt": "Is the kitchen usage residential (in-unit apartment kitchens, shared kitchens for residents) or commercial (catering, central kitchen for staff)?"
+    },
+    {
+      "id": "facility_type",
+      "label": "Facility Type",
+      "label_de": "Einrichtungstyp",
+      "type": "enum",
+      "values": ["senior_care", "assisted_living", "dementia_ward", "residential_home", "supported_living", "other_residential"],
+      "required": true,
+      "extract_prompt": "What type of senior-living or care facility is this? (e.g. full in-patient care, assisted living, dementia ward)"
+    },
+    {
+      "id": "num_units",
+      "label": "Number of Residential Units",
+      "label_de": "Anzahl Wohneinheiten",
+      "type": "integer",
+      "min": 10,
+      "max": 300,
+      "required": true,
+      "extract_prompt": "How many residential units or apartments does the facility have?"
+    },
+    {
+      "id": "timeline",
+      "label": "Decision / Installation Timeline",
+      "label_de": "Entscheidungs- / Installationszeitraum",
+      "type": "string",
+      "examples": ["Q3 2026", "within 6 months", "2027", "immediate"],
+      "required": true,
+      "extract_prompt": "When is the facility planning to make the purchasing decision or have new appliances installed?"
+    },
+    {
+      "id": "budget_range",
+      "label": "Budget Range (monthly lease, EUR)",
+      "label_de": "Budgetrahmen (monatliche Miete, EUR)",
+      "type": "enum",
+      "values": ["<500", "500-2000", "2000-5000", "5000-10000", ">10000", "unknown"],
+      "required": true,
+      "extract_prompt": "Does the facility have a rough monthly budget in mind for kitchen appliance rental? Even a ballpark helps."
+    },
+    {
+      "id": "decision_maker",
+      "label": "Decision Maker Name & Role",
+      "label_de": "Entscheider Name & Rolle",
+      "type": "string",
+      "examples": ["Dr. Maria Schmidt, Managing Director", "Thomas Bauer, Facility Manager"],
+      "required": true,
+      "extract_prompt": "Who is the person who will ultimately sign off on this purchase — their name and role?"
+    }
+  ],
+
+  "completeness_threshold": 0.8,
+  "note": "Completeness = filled_required_fields / total_required_fields. Otto requires ≥ 0.8 to generate draft."
+}

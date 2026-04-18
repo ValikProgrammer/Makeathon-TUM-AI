@@ -1,0 +1,612 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>undeterministic tornado · Sales Cockpit</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  html, body { background: #fbfbfd; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Inter', 'SF Pro Text', ui-sans-serif, system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    color: #1d1d1f;
+    letter-spacing: -0.01em;
+  }
+  .mono { font-family: 'SF Mono', ui-monospace, SFMono-Regular, Menlo, monospace; }
+  .card {
+    background: white;
+    border-radius: 18px;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.04), 0 4px 12px rgba(0,0,0,0.04);
+    border: 1px solid rgba(0,0,0,0.04);
+  }
+  .card-sub {
+    background: #f5f5f7;
+    border-radius: 10px;
+  }
+  .chip {
+    background: #f5f5f7;
+    border-radius: 999px;
+    padding: 4px 10px;
+    font-size: 11px;
+    color: #6e6e73;
+  }
+  .divider { border-color: rgba(0,0,0,0.06); }
+  .pulse-dot { box-shadow: 0 0 0 0 rgba(52,199,89,.6); animation: pulse 2s infinite; }
+  @keyframes pulse {
+    0%   { box-shadow: 0 0 0 0 rgba(52,199,89,.6); }
+    70%  { box-shadow: 0 0 0 6px rgba(52,199,89,0); }
+    100% { box-shadow: 0 0 0 0 rgba(52,199,89,0); }
+  }
+  .fade-in { animation: fadeIn .3s ease-out; }
+  @keyframes fadeIn { from { opacity:0; transform: translateY(2px);} to { opacity:1; transform: none;} }
+  .scroll-hidden::-webkit-scrollbar { display: none; }
+  .scroll-hidden { scrollbar-width: none; }
+  .btn-primary {
+    background: #1d1d1f; color: white; border-radius: 10px;
+    padding: 10px 16px; font-size: 14px; font-weight: 500;
+  }
+  .kpi-num { font-size: 28px; font-weight: 600; line-height: 1; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+  .kpi-lbl { font-size: 11px; color: #8e8e93; margin-top: 4px; line-height: 1.3; }
+  .hero-num { font-size: 44px; font-weight: 600; line-height: 1; letter-spacing: -0.03em; font-variant-numeric: tabular-nums; }
+  .hero-lbl { font-size: 13px; color: #6e6e73; margin-top: 6px; }
+  .section-lbl { font-size: 11px; color: #8e8e93; font-weight: 500; }
+  .stat-num { font-size: 20px; font-weight: 600; line-height: 1; font-variant-numeric: tabular-nums; letter-spacing: -0.01em; }
+  .stat-lbl { font-size: 11px; color: #8e8e93; margin-top: 2px; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script type="text/babel">
+const { useState, useEffect, useMemo, useRef } = React;
+
+// ---- Data ---------------------------------------------------------------
+const seedLeads = [
+  { id: "L-1047", org: "Diakoniewerk Munich",        facility: "Haidhausen Senior Residence", units: 42, city: "Munich",    stage: "offer_made",     icp: "high", value: 21168 },
+  { id: "L-1048", org: "Caritas Freiburg",           facility: "St. Elisabeth",               units: 68, city: "Freiburg",  stage: "lead_qualified", icp: "high", value: 34272, live: true },
+  { id: "L-1049", org: "AWO Hannover",               facility: "Haus am Park",                units: 34, city: "Hannover",  stage: "lead_qualified", icp: "mid",  value: 17136, escalated: true },
+  { id: "L-1050", org: "Johanniter Stift Cologne",   facility: "Haus Lindenthal",             units: 56, city: "Cologne",   stage: "signal",         icp: "high", value: 28224 },
+  { id: "L-1053", org: "Malteser Nuremberg",         facility: "Haus St. Katharina",          units: 44, city: "Nuremberg", stage: "signal",         icp: "high", value: 22176 },
+  { id: "L-1052", org: "Evangelische Stiftung Bonn", facility: "Haus am Rhein",               units: 38, city: "Bonn",      stage: "signal",         icp: "mid",  value: 19152 },
+  { id: "L-1054", org: "Paritätischer Essen",        facility: "Wohnpark Ruhr",               units: 28, city: "Essen",     stage: "signal",         icp: "low",  value: 14112 },
+  { id: "L-1055", org: "Kreuzbund Leipzig",          facility: "Haus Eichenblick",            units: 46, city: "Leipzig",   stage: "deal_closed",    icp: "high", value: 23184 },
+];
+
+const stages = [
+  { key: "signal",         label: "Signal identified", accent: "#0071e3" },
+  { key: "lead_qualified", label: "Lead qualified",    accent: "#ff9500" },
+  { key: "offer_made",     label: "Offer made",        accent: "#af52de" },
+  { key: "deal_closed",    label: "Deal closed",       accent: "#34c759" },
+];
+
+const icpRank = { high: 0, mid: 1, low: 2 };
+const icpStyle = {
+  high: { dot: "#34c759", label: "high" },
+  mid:  { dot: "#ff9500", label: "mid" },
+  low:  { dot: "#8e8e93", label: "low" },
+};
+
+const transcript = [
+  { who: "agent",   line: "Good morning Dr. Wehner — this is Kate, AI assistant from lease·a·kitchen. Call is recorded." },
+  { who: "contact", line: "Two minutes — what is it?" },
+  { who: "agent",   line: "Your sustainability report mentions residential-kitchen modernisation by 2027. Residential wing, not central?" },
+  { who: "contact", line: "Residential only — meals per floor." },
+  { who: "agent",   line: "68 units, still accurate?" },
+  { who: "contact", line: "68, yes. 12 in the new dementia wing." },
+  { who: "agent",   line: "Q3 or Q4 2026?" },
+  { who: "contact", line: "Q4 October. No offers collected yet." },
+];
+
+const envelope = [
+  { label: "Usage",    val: "Residential",       tag: "ICP" },
+  { label: "Facility", val: "Senior + dementia", tag: "" },
+  { label: "Units",    val: "68",                 tag: "" },
+  { label: "Timeline", val: "Q4/2026",            tag: "" },
+  { label: "Budget",   val: "open",               tag: "" },
+  { label: "Decision", val: "—",                  tag: "" },
+];
+
+// ---- Job descriptions ---------------------------------------------------
+const jobs = {
+  scout: {
+    title: "Jack the Scout",
+    body: `You are Jack — the Scout for lease·a·kitchen.
+
+Your mission: find the right companies — the ones that have
+already signalled intent to renovate residential kitchens.
+
+Watch public sources (TED, DNK, Bund.de, building permits)
+for German senior-living operators.
+
+Create a lead only when:
+  ✓ The signal is public and timestamped
+  ✓ The operator runs residential / assisted-living / dementia units
+  ✓ The scope is residential appliances (in-unit or shared floor kitchens)
+
+You MUST reject signals for:
+  ✗ Central kitchens, catering kitchens, commercial-grade appliances
+  ✗ Canteens, mensas, gastronomy
+  ✗ Operators outside our ICP (hospitals, hotels, restaurants)
+
+When in doubt → reject. False positives damage the BSH relationship.
+
+Output per match: { org, facility, units, city, signal_source,
+signal_quote, signal_url, residential_confidence }`,
+  },
+  caller: {
+    title: "Outbound Kate",
+    body: `You are Kate — the Outbound Caller for lease·a·kitchen.
+
+Your mission: qualify leads, follow up, and persuade — without ever pushing.
+Call the contact attached to a signal and turn them into a qualified
+lead with an explicit opt-in.
+
+Always, without exception:
+  1. Disclose you are an AI at the start of the call
+  2. Ask consent to record the call
+  3. Reference the public signal as the reason for calling
+  4. Confirm residential vs. central kitchen BEFORE continuing
+
+Extract these 6 fields:
+  · usage_type        (must be residential)
+  · facility_type     (senior / assisted / dementia / mixed)
+  · num_units         (integer)
+  · timeline          (quarter + year)
+  · budget_range      (rough order of magnitude)
+  · decision_maker    (role + level)
+
+End the call with an explicit question:
+  "May we send you a tailored offer?" → capture opt_in as yes/no.
+
+If the contact hesitates on any field, escalate. Do not guess.
+Never push, never repeat, never call again without explicit invitation.`,
+  },
+  closer: {
+    title: "Offer Otto",
+    body: `You are Otto — the Offer generator for lease·a·kitchen.
+
+Your mission: generate tailored offers for leads where Kate
+captured opt_in = true. Every offer is specific to the operator,
+never a generic template.
+
+Act only when:
+  ✓ Opt-in is explicit and on record
+  ✓ All 6 envelope fields are present
+  ✓ Deal size estimate is below €100k (otherwise escalate)
+
+Your offer includes:
+  • A specific TCO calculation for this operator's unit count
+  • The residential-only scope, clearly stated
+  • One concrete next step (reply, callback, or review meeting)
+
+Follow-up policy:
+  · If no reply within 5 working days → follow up ONCE
+  · If still no reply → mark lead "cold" and stop
+  · No further outreach ever without an explicit new signal
+
+Escalate immediately when:
+  → deal > €100k
+  → legal or contractual question
+  → any scope hint that is not residential`,
+  },
+};
+
+// ---- Avatar -------------------------------------------------------------
+const avatarSrc    = { scout: "../roles/jack.png",  caller: "../roles/kate.png",  closer: "../roles/otto.png" };
+const avatarBorder = { scout: "#0071e3",   caller: "#ff9500",   closer: "#34c759"  };
+function Avatar({ kind, size = 44 }) {
+  return (
+    <img
+      src={avatarSrc[kind]}
+      alt={kind}
+      width={size}
+      height={size}
+      style={{ borderColor: avatarBorder[kind], width: size, height: size }}
+      className="rounded-full object-cover border-2 shrink-0"
+    />
+  );
+}
+
+// ---- Office card --------------------------------------------------------
+function Office({ agent, title, role, status, currently, kpis, logBody, accent, onOpenJob }) {
+  return (
+    <div className="card p-5 flex flex-col">
+      {/* Header: avatar + name + status */}
+      <div className="flex items-center gap-3 mb-1">
+        <Avatar kind={agent} size={44} />
+        <div className="min-w-0 flex-1">
+          <div className="text-[15px] font-semibold leading-tight truncate">{title}</div>
+          <div className="flex items-center gap-1.5 mt-0.5">
+            <span className={`w-1.5 h-1.5 rounded-full ${status.dot}`}></span>
+            <span className="text-[11px] text-neutral-500">{status.label}</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Currently working on — one line */}
+      <div className="mt-3 mb-5 text-[13px] text-neutral-700 leading-snug flex items-start gap-2">
+        <span className="section-lbl shrink-0">Now</span>
+        <span className="truncate">{currently}</span>
+      </div>
+
+      {/* Success metrics */}
+      <div className={`grid gap-4 mb-5 ${kpis.length === 4 ? 'grid-cols-4' : 'grid-cols-3'}`}>
+        {kpis.map((k, i) => (
+          <div key={i}>
+            <div className="kpi-num" style={{ color: k.color || '#1d1d1f' }}>{k.value}</div>
+            <div className="kpi-lbl">{k.label}</div>
+          </div>
+        ))}
+      </div>
+
+      {/* Log */}
+      <div className="card-sub p-3 flex-1 min-h-[92px] mb-4">
+        {logBody}
+      </div>
+
+      {/* Job description → modal */}
+      <button
+        onClick={onOpenJob}
+        className="text-left w-full border-t divider pt-3 flex items-start justify-between gap-2 hover:opacity-70 transition"
+      >
+        <div className="text-[12px] text-neutral-600 leading-snug pr-4">{role}</div>
+        <span className="shrink-0 text-[11px] text-neutral-400 whitespace-nowrap">Job desc →</span>
+      </button>
+    </div>
+  );
+}
+
+// ---- Scout office -------------------------------------------------------
+function ScoutOffice({ onOpenJob }) {
+  const log = [
+    { t: "rejected", txt: "Uni Leipzig canteen — commercial" },
+    { t: "matched",  txt: "Johanniter Cologne — residential" },
+    { t: "rejected", txt: "District Stuttgart — catering" },
+    { t: "matched",  txt: "Stiftung Bonn — residential" },
+  ];
+  return (
+    <Office
+      agent="scout"
+      title="Jack the Scout"
+      role="Finds the right companies — the ones that have already signalled intent."
+      accent="#0071e3"
+      onOpenJob={onOpenJob}
+      status={{ dot: "bg-green-500 pulse-dot", label: "Active · scanning sources" }}
+      currently="Scanning TED + DNK for residential-wing renovation tenders"
+      kpis={[
+        { label: "Scanned",  value: "1,248" },
+        { label: "ICP high", value: "4", color: "#34c759" },
+        { label: "ICP mid",  value: "3", color: "#ff9500" },
+        { label: "ICP low",  value: "12", color: "#8e8e93" },
+      ]}
+      logBody={
+        <ul className="space-y-1.5 text-[12px]">
+          {log.map((l, i) => (
+            <li key={i} className="flex items-center gap-2">
+              <span className={`w-1 h-1 rounded-full ${l.t === "matched" ? "bg-blue-500" : "bg-red-400"}`}></span>
+              <span className={l.t === "matched" ? "text-neutral-700" : "text-neutral-400 line-through"}>{l.txt}</span>
+            </li>
+          ))}
+        </ul>
+      }
+    />
+  );
+}
+
+// ---- Caller office (live transcript) ------------------------------------
+function CallerOffice({ onOpenJob }) {
+  const [idx, setIdx] = useState(0);
+  const [env, setEnv] = useState(0);
+  const ref = useRef(null);
+  useEffect(() => {
+    const t = setInterval(() => setIdx(i => Math.min(i + 1, transcript.length)), 2400);
+    return () => clearInterval(t);
+  }, []);
+  useEffect(() => {
+    if (idx >= 4 && env < 3) setEnv(3);
+    if (idx >= 6 && env < 4) setEnv(4);
+    if (idx >= transcript.length && env < 5) setEnv(5);
+  }, [idx]);
+  useEffect(() => { if (ref.current) ref.current.scrollTop = ref.current.scrollHeight; }, [idx]);
+
+  return (
+    <Office
+      agent="caller"
+      title="Outbound Kate"
+      role="The single face to the customer — qualifies, follows up, dispatches Otto's offer, closes. Voice, SMS and email."
+      accent="#ff9500"
+      onOpenJob={onOpenJob}
+      status={{ dot: "bg-orange-500 pulse-dot", label: "On call · 2:34" }}
+      currently="Caritas Freiburg · qualifying 6 fields live"
+      kpis={[
+        { label: "Calls",            value: "4" },
+        { label: "Offers requested", value: "3", color: "#34c759" },
+        { label: "Deals closed",     value: "1", color: "#0071e3" },
+        { label: "Escalated",        value: "1", color: "#ff9500" },
+      ]}
+      logBody={
+        <div ref={ref} className="h-full overflow-y-auto scroll-hidden text-[12px] space-y-1.5 pr-1">
+          {transcript.slice(0, idx).map((l, i) => (
+            <div key={i} className="fade-in leading-snug">
+              <span className={`font-semibold ${l.who === "agent" ? "text-blue-600" : "text-neutral-900"}`}>
+                {l.who === "agent" ? "K" : "W"}
+              </span>
+              <span className="text-neutral-700">  {l.line}</span>
+            </div>
+          ))}
+          {idx < transcript.length && <div className="text-neutral-400 italic">typing…</div>}
+        </div>
+      }
+    />
+  );
+}
+
+// ---- Closer office ------------------------------------------------------
+function CloserOffice({ onOpenJob }) {
+  const log = [
+    { t: "sent",      txt: "Offer sent — Bergmann / Diakoniewerk" },
+    { t: "pending",   txt: "Waiting for reply — L-1047" },
+    { t: "escalated", txt: "Escalated — AWO Hannover (budget)" },
+    { t: "draft",     txt: "Draft ready — L-1052" },
+  ];
+  const color = { sent: "bg-green-500", pending: "bg-neutral-400", escalated: "bg-orange-500", draft: "bg-blue-500" };
+  return (
+    <Office
+      agent="closer"
+      title="Offer Otto"
+      role="Backroom drafter — generates tailored offers with TCO, never contacts the customer. Hands the draft back to Kate."
+      accent="#34c759"
+      onOpenJob={onOpenJob}
+      status={{ dot: "bg-neutral-400", label: "Idle · 1 in review" }}
+      currently="Drafting offer for Stiftung Bonn · awaits human review"
+      kpis={[
+        { label: "Generated",    value: "4" },
+        { label: "Human review", value: "1", color: "#ff9500" },
+        { label: "Sent",         value: "2", color: "#34c759" },
+      ]}
+      logBody={
+        <ul className="space-y-1.5 text-[12px]">
+          {log.map((l, i) => (
+            <li key={i} className="flex items-center gap-2">
+              <span className={`w-1 h-1 rounded-full ${color[l.t]}`}></span>
+              <span className="text-neutral-700">{l.txt}</span>
+            </li>
+          ))}
+        </ul>
+      }
+    />
+  );
+}
+
+// ---- Kanban card --------------------------------------------------------
+function LeadCard({ lead, onClick }) {
+  const icp = icpStyle[lead.icp] || icpStyle.mid;
+  const leftStripe = lead.live ? "#ff9500" : lead.escalated ? "#ff9500" : "transparent";
+  return (
+    <button
+      onClick={onClick}
+      className="w-full text-left bg-white rounded-xl border border-black/5 hover:border-black/10 transition shadow-sm overflow-hidden flex"
+    >
+      <div style={{ background: leftStripe, width: 3 }}></div>
+      <div className="flex-1 min-w-0 p-3">
+        <div className="flex items-center justify-between gap-2">
+          <div className="font-medium text-[13px] text-neutral-900 truncate">{lead.org}</div>
+          <span className="shrink-0 w-1.5 h-1.5 rounded-full" style={{ background: icp.dot }} title={`ICP ${icp.label}`}></span>
+        </div>
+        <div className="flex items-center justify-between gap-2 mt-1">
+          <div className="text-[11px] text-neutral-500 truncate">{lead.facility}</div>
+          <span className="shrink-0 text-[11px] text-neutral-400 tabular-nums">{lead.units}u</span>
+        </div>
+        {(lead.live || lead.escalated) && (
+          <div className="mt-1.5 text-[10px] font-medium text-orange-600 flex items-center gap-1">
+            {lead.live && <span className="w-1.5 h-1.5 rounded-full bg-orange-500 pulse-dot"></span>}
+            {lead.live ? "On call" : "Escalated"}
+          </div>
+        )}
+      </div>
+    </button>
+  );
+}
+
+// ---- Main ---------------------------------------------------------------
+function App() {
+  const [selected, setSelected] = useState(null);
+  const [jobAgent, setJobAgent] = useState(null);
+
+  const counts = useMemo(() => {
+    const c = {};
+    stages.forEach(s => c[s.key] = 0);
+    seedLeads.forEach(l => c[l.stage]++);
+    return c;
+  }, []);
+
+  const pipelineValue = useMemo(() => {
+    return seedLeads
+      .filter(l => l.stage !== "deal_closed")
+      .reduce((sum, l) => sum + (l.value || 0), 0);
+  }, []);
+  const inMotion = seedLeads.filter(l => l.stage === "lead_qualified" || l.stage === "offer_made").length;
+
+  const euro = (n) => "€" + n.toLocaleString("de-DE");
+
+  return (
+    <div className="min-h-screen">
+      {/* Header */}
+      <header className="border-b divider bg-white/80 backdrop-blur sticky top-0 z-10">
+        <div className="max-w-[1400px] mx-auto px-8 py-3.5 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-7 h-7 rounded-lg bg-neutral-900 text-white flex items-center justify-center font-semibold text-[13px]">u</div>
+            <div className="flex items-baseline gap-2">
+              <span className="font-semibold text-[14px]">undeterministic tornado</span>
+              <span className="text-[12px] text-neutral-400">· lease·a·kitchen</span>
+            </div>
+          </div>
+          <div className="chip flex items-center gap-1.5">
+            <span className="w-1.5 h-1.5 rounded-full bg-green-500 pulse-dot"></span>
+            <span>3 agents active</span>
+          </div>
+        </div>
+      </header>
+
+      <main className="max-w-[1400px] mx-auto px-8 py-8">
+
+        {/* Hero metric + stat bar */}
+        <section className="card p-8 mb-8 flex items-end justify-between gap-8">
+          <div>
+            <div className="text-[11px] text-neutral-500 uppercase tracking-wider font-medium mb-3">Revenue pipeline</div>
+            <div className="hero-num">{euro(pipelineValue)}</div>
+            <div className="hero-lbl">{inMotion} deals in motion · {counts.signal} signals identified today</div>
+          </div>
+          <div className="flex items-end gap-10 pb-1">
+            <div>
+              <div className="stat-num">7</div>
+              <div className="stat-lbl">Leads</div>
+            </div>
+            <div className="h-10 w-px bg-black/5"></div>
+            <div>
+              <div className="stat-num">3</div>
+              <div className="stat-lbl">Opt-ins</div>
+            </div>
+            <div className="h-10 w-px bg-black/5"></div>
+            <div>
+              <div className="stat-num" style={{ color: "#34c759" }}>75%</div>
+              <div className="stat-lbl">Conversion</div>
+            </div>
+            <div className="h-10 w-px bg-black/5"></div>
+            <div>
+              <div className="stat-num" style={{ color: "#ff9500" }}>1</div>
+              <div className="stat-lbl">Escalated</div>
+            </div>
+            <div className="h-10 w-px bg-black/5"></div>
+            <div>
+              <div className="stat-num" style={{ color: "#34c759" }}>1</div>
+              <div className="stat-lbl">Closed</div>
+            </div>
+          </div>
+        </section>
+
+        {/* The team */}
+        <section className="mb-10">
+          <div className="flex items-baseline justify-between mb-4">
+            <h2 className="text-[15px] font-semibold">Your team</h2>
+            <span className="text-[12px] text-neutral-500">Autonomous · running 24/7</span>
+          </div>
+          <div className="grid grid-cols-3 gap-5">
+            <ScoutOffice  onOpenJob={() => setJobAgent("scout")} />
+            <CallerOffice onOpenJob={() => setJobAgent("caller")} />
+            <CloserOffice onOpenJob={() => setJobAgent("closer")} />
+          </div>
+        </section>
+
+        {/* Pipeline */}
+        <section>
+          <div className="flex items-baseline justify-between mb-4">
+            <h2 className="text-[15px] font-semibold">Pipeline</h2>
+            <span className="text-[12px] text-neutral-500">{seedLeads.length} active leads · sorted by ICP score</span>
+          </div>
+          <div className="grid grid-cols-4 gap-4">
+            {stages.map(s => {
+              const leadsInStage = seedLeads
+                .filter(l => l.stage === s.key)
+                .sort((a, b) => (icpRank[a.icp] ?? 99) - (icpRank[b.icp] ?? 99));
+              return (
+                <div key={s.key} className="flex flex-col">
+                  <div className="flex items-center justify-between mb-3 px-1">
+                    <div className="flex items-center gap-2">
+                      <span className="w-1.5 h-1.5 rounded-full" style={{ background: s.accent }}></span>
+                      <span className="text-[12px] font-semibold text-neutral-700">{s.label}</span>
+                    </div>
+                    <span className="text-[11px] text-neutral-400 tabular-nums">{counts[s.key] || 0}</span>
+                  </div>
+                  <div className="card-sub p-2 space-y-2 flex-1 min-h-[200px]">
+                    {leadsInStage.map(l => (
+                      <LeadCard key={l.id} lead={l} onClick={() => setSelected(l)} />
+                    ))}
+                    {leadsInStage.length === 0 && (
+                      <div className="text-[11px] text-neutral-400 text-center py-8">—</div>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </section>
+      </main>
+
+      {/* Job description modal */}
+      {jobAgent && (
+        <div className="fixed inset-0 bg-black/20 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={() => setJobAgent(null)}>
+          <div className="card p-6 max-w-2xl w-full" onClick={e => e.stopPropagation()}>
+            <div className="flex items-start justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <Avatar kind={jobAgent} size={44} />
+                <div>
+                  <div className="text-[11px] font-medium text-neutral-500 uppercase tracking-wider">System prompt</div>
+                  <h3 className="text-[17px] font-semibold">{jobs[jobAgent].title}</h3>
+                </div>
+              </div>
+              <button className="text-neutral-400 hover:text-neutral-700 text-lg leading-none" onClick={() => setJobAgent(null)}>✕</button>
+            </div>
+            <pre className="mt-5 card-sub p-4 text-[12px] mono whitespace-pre-wrap leading-relaxed text-neutral-800 max-h-[60vh] overflow-y-auto">{jobs[jobAgent].body}</pre>
+            <div className="mt-4 flex items-center justify-between text-[11px] text-neutral-500">
+              <span>Injected into the HappyRobot workflow at runtime.</span>
+              <span className="chip">v1 · read-only</span>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Lead detail modal */}
+      {selected && (
+        <div className="fixed inset-0 bg-black/20 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={() => setSelected(null)}>
+          <div className="card p-6 max-w-xl w-full" onClick={e => e.stopPropagation()}>
+            <div className="flex items-start justify-between">
+              <div>
+                <h3 className="text-[17px] font-semibold">{selected.org}</h3>
+                <div className="text-[13px] text-neutral-500 mt-0.5">{selected.facility} · {selected.units} units · {selected.city}</div>
+              </div>
+              <button className="text-neutral-400 hover:text-neutral-700 text-lg leading-none" onClick={() => setSelected(null)}>✕</button>
+            </div>
+
+            <div className="mt-5 card-sub p-4 text-[13px]">
+              <div className="text-[11px] uppercase tracking-wider text-neutral-500 font-medium mb-1">Signal</div>
+              <div className="text-neutral-800">Public tender — residential-wing renovation</div>
+            </div>
+
+            {selected.stage !== "signal" && (
+              <div className="mt-5">
+                <div className="text-[13px] font-semibold mb-3">BSH Envelope</div>
+                <div className="grid grid-cols-2 gap-2">
+                  {envelope.map(f => (
+                    <div key={f.label} className="card-sub p-3 flex justify-between items-center">
+                      <span className="text-[12px] text-neutral-500">
+                        {f.label}
+                        {f.tag && <span className="ml-1.5 text-[9px] font-semibold text-green-600 uppercase tracking-wider">{f.tag}</span>}
+                      </span>
+                      <span className="text-[13px] font-medium">{f.val}</span>
+                    </div>
+                  ))}
+                </div>
+                {selected.stage === "offer_made" && (
+                  <button className="btn-primary w-full mt-5">Prepare BSH draft →</button>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+</script>
+</body>
+</html>

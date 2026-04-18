@@ -1,0 +1,22 @@
+{
+  "version": "1.0",
+  "description": "Do-Not-Contact list. Checked before EVERY outbound step (call, SMS, email, WhatsApp). Add entries manually or via cockpit DNC button.",
+  "updated_at": "2026-04-18",
+
+  "phones": [
+    "+4915100000001",
+    "+4930000000002"
+  ],
+
+  "emails": [
+    "noreply@test-dnc.de"
+  ],
+
+  "whatsapp": [
+    "+4915100000001"
+  ],
+
+  "organisations": [],
+
+  "instructions": "To add a contact to DNC: POST /api/dnc with { type: 'phone'|'email'|'whatsapp'|'org', value: '...' }. The cockpit DNC button does this automatically."
+}
