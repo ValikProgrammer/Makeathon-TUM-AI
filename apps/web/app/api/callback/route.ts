@@ -1,32 +1,42 @@
 /**
  * POST /api/callback
- * Receives call completion data from HappyRobot after Kate finishes a call.
- * HappyRobot should be configured to POST to this URL with extracted envelope fields.
+ * Receives Kate's call-ended payload from HappyRobot.
  *
- * Expected body (from HappyRobot Prompt step output, matching Kate v3 prompt):
+ * Expected body (flat — matches leads table columns):
  * {
- *   contact_id: string,           // lead ID passed when triggering
- *   lead_id: string,              // fallback
- *   duration: number,
- *   call_outcome: string,         // qualified | homologation_fail | not_interested | callback_requested | escalated | dropped
- *   opt_in: boolean,
- *   usage_type: string,
- *   facility_type: string,
- *   num_units: number,
- *   timeline: string,
- *   budget_indicator: string,     // prompt uses budget_indicator (also accept budget_range)
- *   preferred_term_months: number,
- *   decision_maker: string,
- *   preferred_channel: string,
- *   escalate: boolean,
- *   escalation_reason: string,
- *   callback_time: string,
- *   qualification_partial: boolean,
- *   notes: string,
+ *   contact_id: string,            // lead ID passed when triggering
+ *   lead_id: string,               // fallback
+ *   duration?: number,
+ *   call_outcome?: "qualified" | "homologation_fail" | "not_interested" | "callback_requested" | "escalated" | "dropped",
+ *
+ *   // Qualification
+ *   facility_type?: string,
+ *   num_units?: number,
+ *   timeline?: string,
+ *   preferred_term_months?: number,
+ *   decision_maker?: string,
+ *
+ *   // Bundle mix
+ *   bundle_leader?: number,
+ *   bundle_profi?: number,
+ *   bundle_top_feature?: number,
+ *
+ *   // Outcome
+ *   opt_in?: boolean,
+ *   preferred_channel?: "email" | "whatsapp" | "phone",
+ *   contact_address?: string,
+ *   call_transcript_url?: string,
+ *   call_notes?: string,
+ *
+ *   // Control-plane fields
+ *   escalate?: boolean,
+ *   escalation_reason?: string,
  * }
+ *
+ * If HappyRobot emits the payload as a JSON string in `extracted`, we parse it.
  */
 import { NextRequest, NextResponse } from "next/server";
-import { getLeadById, updateLeadStage, appendAudit } from "@/lib/db";
+import { getLeadById, updateLeadStage, appendAudit, type Lead, type Stage } from "@/lib/db";
 
 export async function POST(req: NextRequest) {
   const body = await req.json().catch(() => null);
@@ -38,32 +48,50 @@ export async function POST(req: NextRequest) {
   const lead = getLeadById(lead_id);
   if (!lead) return NextResponse.json({ error: "lead not found" }, { status: 404 });
 
-  // If HappyRobot Prompt node returned JSON as text in `extracted`, parse it
+  // Unwrap extracted JSON blob if present
   let extracted: Record<string, unknown> = {};
   if (body.extracted && typeof body.extracted === "string") {
     try {
       const raw = body.extracted.trim().replace(/^```json|^```|```$/g, "").trim();
       extracted = JSON.parse(raw);
     } catch {
-      // not valid JSON — continue with direct fields
+      /* ignore */
     }
   }
+  const m: Record<string, unknown> = { ...extracted, ...body };
 
-  // Merge: direct fields take priority, extracted fields as fallback
-  const merged = { ...extracted, ...body };
+  const optIn = m.opt_in === true || m.opt_in === "true";
+  const escalate = m.escalate === true || m.escalate === "true";
+  const escalationReason = String(m.escalation_reason ?? "");
+  const callOutcome = String(m.call_outcome ?? (optIn ? "qualified" : "not_interested"));
 
-  const optIn: boolean = merged.opt_in === true || merged.opt_in === "true";
-  const escalate: boolean = merged.escalate === true || merged.escalate === "true";
-  const escalationReason: string = String(merged.escalation_reason ?? "");
-  const callOutcome: string = String(merged.call_outcome ?? (optIn ? "qualified" : "not_interested"));
+  const bundleLeader = Number(m.bundle_leader ?? 0);
+  const bundleProfi = Number(m.bundle_profi ?? 0);
+  const bundleTopFeature = Number(m.bundle_top_feature ?? 0);
+  const numUnits = Number(m.num_units ?? bundleLeader + bundleProfi + bundleTopFeature);
 
-  const envelope = {
-    usage_type: String(merged.usage_type ?? ""),
-    facility_type: String(merged.facility_type ?? ""),
-    num_units: Number(merged.num_units ?? 0),
-    timeline: String(merged.timeline ?? ""),
-    budget_range: String(merged.budget_indicator ?? merged.budget_range ?? ""),
-    decision_maker: String(merged.decision_maker ?? ""),
+  // Map call outcome → pipeline stage
+  let nextStage: Stage = lead.stage;
+  if (callOutcome === "homologation_fail") nextStage = "homologation_fail";
+  else if (escalate || escalationReason) nextStage = "escalated";
+  else if (optIn) nextStage = "qualified";
+  else nextStage = "not_interested";
+
+  const patch: Partial<Lead> = {
+    facility_type: m.facility_type ? String(m.facility_type) : undefined,
+    num_units: numUnits || undefined,
+    timeline: m.timeline ? String(m.timeline) : undefined,
+    preferred_term_months: m.preferred_term_months ? Number(m.preferred_term_months) : undefined,
+    decision_maker: m.decision_maker ? String(m.decision_maker) : undefined,
+    bundle_leader: bundleLeader || undefined,
+    bundle_profi: bundleProfi || undefined,
+    bundle_top_feature: bundleTopFeature || undefined,
+    opt_in: optIn,
+    preferred_channel: m.preferred_channel as Lead["preferred_channel"],
+    contact_address: m.contact_address ? String(m.contact_address) : undefined,
+    call_transcript_url: m.call_transcript_url ? String(m.call_transcript_url) : undefined,
+    call_notes: m.call_notes ? String(m.call_notes) : undefined,
+    escalation_reason: escalationReason || undefined,
   };
 
   appendAudit({
@@ -74,35 +102,12 @@ export async function POST(req: NextRequest) {
     meta: {
       duration: body.duration,
       call_outcome: callOutcome,
-      opt_in: optIn,
-      escalate,
-      escalation_reason: escalationReason,
-      preferred_channel: merged.preferred_channel,
-      preferred_term_months: merged.preferred_term_months,
-      callback_time: merged.callback_time,
-      qualification_partial: merged.qualification_partial,
-      homologation_gate_passed: merged.homologation_gate_passed,
-      contact_address: merged.contact_address,
-      hook_used: merged.hook_used,
-      hook_resonated: merged.hook_resonated,
-      notes: merged.notes,
-      envelope,
+      next_stage: nextStage,
+      ...patch,
     },
   });
 
-  if (callOutcome === "homologation_fail") {
-    updateLeadStage(lead_id, "dnc", { envelope });
-  } else if (escalate || escalationReason) {
-    updateLeadStage(lead_id, lead.stage, {
-      escalated: true,
-      escalationReason: escalationReason || callOutcome,
-      envelope,
-    });
-  } else if (optIn) {
-    updateLeadStage(lead_id, "qualified", { optIn: true, envelope });
-  } else {
-    updateLeadStage(lead_id, "signal", { optIn: false, envelope });
-  }
+  updateLeadStage(lead_id, nextStage, patch);
 
-  return NextResponse.json({ ok: true, lead_id, opt_in: optIn });
+  return NextResponse.json({ ok: true, lead_id, stage: nextStage, opt_in: optIn });
 }

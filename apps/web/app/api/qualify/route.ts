@@ -6,19 +6,17 @@
  * Body: { lead_id: string }
  */
 import { NextRequest, NextResponse } from "next/server";
-import { getLeadById, updateLeadStage, appendAudit, isDnc } from "@/lib/db";
+import { getLeadById, updateLeadStage, appendAudit, isDnc, type MotivationString } from "@/lib/db";
 
 const HAPPYROBOT_CALLER_WEBHOOK = process.env.HAPPYROBOT_CALLER_WEBHOOK_URL ?? "";
 const HAPPYROBOT_API_KEY = process.env.HAPPYROBOT_API_KEY ?? "";
 
-type Hook = "simplify" | "scale" | "optimize" | "circular";
-
 /**
- * Pick the BSH-aligned hook for the opener.
- * Primary: decision-maker role (keyword match). Secondary: ICP tier as archetype tie-breaker.
- * Never pick hook from ICP tier alone — see agents/scout.scoring.md §"Hook Selection".
+ * Pick the BSH-aligned motivation_string for Kate's opener.
+ * Primary: decision-maker role (keyword match). Secondary: score archetype.
+ * Never pick motivation from score alone — see agents/scout.scoring.md §"Hook Selection".
  */
-function pickHook(role: string | undefined, icp: "high" | "mid" | "low"): Hook {
+function pickMotivation(role: string | undefined, score: number | undefined): MotivationString {
   const r = (role ?? "").toLowerCase();
 
   // Primary: decision-maker role
@@ -27,13 +25,11 @@ function pickHook(role: string | undefined, icp: "high" | "mid" | "low"): Hook {
   if (/einrichtungsleitung|facility|hausleitung|betriebsleitung|hausmeister|ops|operations/.test(r)) return "simplify";
   if (/geschäftsführ|ceo|managing director|projektentwickl|expansion|developer/.test(r))             return "scale";
 
-  // Secondary: archetype tie-breaker (when role is unknown or generic)
-  // high ICP → premium operator → default simplify (steady-state senior-living)
-  // mid  ICP → smaller / softer signal → optimize (budget discipline)
-  // low  ICP → opportunistic new build → scale
-  if (icp === "high") return "simplify";
-  if (icp === "mid")  return "optimize";
-  return "scale";
+  // Secondary: score archetype tie-breaker (when role is unknown or generic)
+  const s = score ?? 0;
+  if (s >= 70) return "simplify";  // premium steady-state senior-living
+  if (s >= 40) return "optimize";  // budget-disciplined mid
+  return "scale";                  // opportunistic new build
 }
 
 export async function POST(req: NextRequest) {
@@ -42,36 +38,42 @@ export async function POST(req: NextRequest) {
 
   const lead = getLeadById(lead_id);
   if (!lead) return NextResponse.json({ error: "lead not found" }, { status: 404 });
-  if (lead.stage === "calling") return NextResponse.json({ error: "already calling" }, { status: 409 });
+
+  // Require phone (captured on landing page) before calling
+  if (!lead.person_phone) {
+    return NextResponse.json({ error: "no phone — lead has not opted in via landing page yet" }, { status: 412 });
+  }
 
   // Guardrail: DNC check
-  const contactPhone = lead.contact?.phone ?? "";
-  const contactEmail = lead.contact?.email ?? "";
-  if (isDnc(contactPhone) || isDnc(contactEmail)) {
-    appendAudit({ timestamp: new Date().toISOString(), agent: "guardrail", event: "guardrail.dnc_block", leadId: lead_id, meta: { reason: "contact on DNC list" } });
+  if (isDnc(lead.person_phone) || isDnc(lead.person_email ?? "")) {
+    appendAudit({
+      timestamp: new Date().toISOString(),
+      agent: "guardrail",
+      event: "guardrail.dnc_block",
+      leadId: lead_id,
+      meta: { reason: "contact on DNC list" },
+    });
     return NextResponse.json({ error: "contact is on DNC list" }, { status: 403 });
   }
 
   // Trigger HappyRobot Caller workflow
   if (HAPPYROBOT_CALLER_WEBHOOK) {
     const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "";
-    // Pick hook based on decision-maker role (primary) with archetype fallback.
-    // Rule source: agents/scout.scoring.md — "Hook Selection".
-    const hook = pickHook(lead.contact?.role, lead.icp);
+    const motivation = lead.motivation_string ?? pickMotivation(lead.person_role, lead.score);
 
     const payload: Record<string, unknown> = {
-      to: lead.contact?.phone ?? "",
+      to: lead.person_phone,
       contact_id: lead.id,
       lead_id: lead.id,
-      contact_name: lead.contact?.name ?? "",
-      contact_role: lead.contact?.role ?? "",
-      facility_name: lead.facility ?? lead.org,
-      org: lead.org,
-      city: lead.city,
-      signal_summary: lead.signal?.title ?? `new senior-living facility in ${lead.city}`,
-      signal_source: lead.signal?.source ?? "",
-      hook,
-      campaign_id: `makeathon-2026`,
+      contact_name: lead.person_name ?? "",
+      contact_role: lead.person_role ?? "",
+      facility_name: lead.company_name,
+      city: lead.city ?? "",
+      signal_summary: lead.signal_summary ?? `new senior-living facility in ${lead.city ?? "Germany"}`,
+      signal_url: lead.signal_url ?? "",
+      motivation_string: motivation,
+      hook: motivation, // backwards compat with existing HappyRobot workflow variable name
+      campaign_id: "makeathon-2026",
       callback_url: appUrl ? `${appUrl}/api/callback` : "",
     };
 
@@ -90,8 +92,13 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  updateLeadStage(lead_id, "calling");
-  appendAudit({ timestamp: new Date().toISOString(), agent: "orchestrator", event: "orchestrator.qualify_triggered", leadId: lead_id, meta: { triggered_by: "user" } });
+  appendAudit({
+    timestamp: new Date().toISOString(),
+    agent: "orchestrator",
+    event: "orchestrator.qualify_triggered",
+    leadId: lead_id,
+    meta: { triggered_by: "user" },
+  });
 
-  return NextResponse.json({ ok: true, lead_id, stage: "calling" });
+  return NextResponse.json({ ok: true, lead_id });
 }

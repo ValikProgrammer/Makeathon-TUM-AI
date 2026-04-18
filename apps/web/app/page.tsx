@@ -1,35 +1,108 @@
 "use client";
 import { useEffect, useState, useCallback, useRef } from "react";
 
-type Stage = "signal" | "calling" | "qualified" | "offered" | "dnc";
+type Stage =
+  | "new"
+  | "qualified"
+  | "homologation_fail"
+  | "not_interested"
+  | "escalated"
+  | "offered"
+  | "accepted"
+  | "rejected"
+  | "suppressed";
+
+type MotivationString = "simplify" | "scale" | "optimize" | "circular";
 
 type Lead = {
   id: string;
-  org: string;
-  facility: string;
-  units: number;
-  city: string;
   stage: Stage;
-  icp: "high" | "mid" | "low";
-  value: number;
-  signal?: { source: string; title: string; date: string; url: string };
-  contact?: { name: string; role: string; phone: string; email?: string };
-  envelope?: Record<string, string | number>;
-  optIn?: boolean | null;
-  escalated?: boolean;
-  escalationReason?: string;
-  updatedAt: string;
+  created_at: string;
+  updated_at: string;
+
+  company_name: string;
+  street?: string;
+  postal_code?: string;
+  city?: string;
+  url?: string;
+
+  person_name?: string;
+  person_role?: string;
+  person_email?: string;
+  person_phone?: string;
+
+  signal_url?: string;
+  signal_summary?: string;
+  motivation_string?: MotivationString;
+  score?: number;
+
+  consent_given_at?: string;
+  consent_text_version?: string;
+
+  facility_type?: string;
+  num_units?: number;
+  timeline?: string;
+  preferred_term_months?: number;
+  decision_maker?: string;
+  bundle_leader?: number;
+  bundle_profi?: number;
+  bundle_top_feature?: number;
+  opt_in?: boolean;
+  preferred_channel?: "email" | "whatsapp" | "phone";
+  contact_address?: string;
+  call_transcript_url?: string;
+  call_notes?: string;
+  escalation_reason?: string;
+
+  offer_sent_at?: string;
+  offer_accepted_at?: string;
 };
 
-const STAGES: { key: Stage; label: string; accent: string }[] = [
-  { key: "signal",    label: "Signal identified", accent: "#0071e3" },
-  { key: "calling",   label: "Calling",           accent: "#ff9500" },
-  { key: "qualified", label: "Lead qualified",     accent: "#af52de" },
-  { key: "offered",   label: "Offer made",         accent: "#8e8e93" },
-  { key: "dnc",       label: "Deal closed / DNC",  accent: "#34c759" },
+const BUNDLE_MONTHLY_EUR = { leader: 42, profi: 58, top_feature: 80 };
+
+// Kanban columns — collapses the 9-value stage enum into 5 display buckets
+const COLUMNS: { key: string; label: string; accent: string; matches: (s: Stage) => boolean }[] = [
+  { key: "new",        label: "Signal identified", accent: "#0071e3", matches: (s) => s === "new" },
+  { key: "qualified",  label: "Qualified",         accent: "#af52de", matches: (s) => s === "qualified" },
+  { key: "offered",    label: "Offer sent",        accent: "#ff9500", matches: (s) => s === "offered" },
+  { key: "closed",     label: "Closed",            accent: "#34c759", matches: (s) => s === "accepted" || s === "rejected" },
+  { key: "archive",    label: "Archive",           accent: "#8e8e93", matches: (s) => s === "homologation_fail" || s === "not_interested" || s === "suppressed" },
 ];
 
-const ICP_COLOR: Record<string, string> = { high: "#34c759", mid: "#ff9500", low: "#8e8e93" };
+const MOTIVATION_COLOR: Record<MotivationString, string> = {
+  simplify: "#0F766E",
+  scale:    "#9A3412",
+  optimize: "#1E40AF",
+  circular: "#166534",
+};
+
+function isEscalated(l: Lead): boolean {
+  return l.stage === "escalated";
+}
+
+function monthlyRate(l: Lead): number {
+  return (
+    (l.bundle_leader ?? 0) * BUNDLE_MONTHLY_EUR.leader +
+    (l.bundle_profi ?? 0) * BUNDLE_MONTHLY_EUR.profi +
+    (l.bundle_top_feature ?? 0) * BUNDLE_MONTHLY_EUR.top_feature
+  );
+}
+
+function estPipelineValue(l: Lead): number {
+  const term = l.preferred_term_months ?? 60;
+  const fromMix = monthlyRate(l) * term;
+  if (fromMix > 0) return fromMix;
+  return (l.num_units ?? 0) * BUNDLE_MONTHLY_EUR.profi * 60;
+}
+
+function scoreTier(score: number | undefined): "high" | "mid" | "low" {
+  if (score === undefined) return "mid";
+  if (score >= 70) return "high";
+  if (score >= 40) return "mid";
+  return "low";
+}
+
+const SCORE_COLOR: Record<string, string> = { high: "#34c759", mid: "#ff9500", low: "#8e8e93" };
 
 export default function Cockpit() {
   const [leads, setLeads] = useState<Lead[]>([]);
@@ -72,7 +145,7 @@ export default function Cockpit() {
       });
       const data = await res.json();
       if (res.ok) {
-        showToast(`Kate is calling ${lead.org}…`, true);
+        showToast(`Kate is calling ${lead.company_name}…`, true);
         fetchLeads();
       } else {
         showToast(data.error ?? "Error", false);
@@ -86,13 +159,13 @@ export default function Cockpit() {
 
   const kpis = {
     total: leads.length,
-    pipeline: leads.filter((l) => ["signal", "calling", "qualified", "offered"].includes(l.stage)).length,
+    pipeline: leads.filter((l) => ["new", "qualified", "offered"].includes(l.stage)).length,
     qualified: leads.filter((l) => l.stage === "qualified" || l.stage === "offered").length,
-    closed: leads.filter((l) => l.stage === "dnc").length,
-    escalated: leads.filter((l) => l.escalated).length,
+    closed: leads.filter((l) => l.stage === "accepted").length,
+    escalated: leads.filter(isEscalated).length,
     pipelineValue: leads
-      .filter((l) => l.stage !== "dnc")
-      .reduce((s, l) => s + l.value, 0),
+      .filter((l) => ["new", "qualified", "offered"].includes(l.stage))
+      .reduce((s, l) => s + estPipelineValue(l), 0),
   };
 
   return (
@@ -131,23 +204,23 @@ export default function Cockpit() {
 
         {/* Kanban */}
         <div className="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-5 gap-4">
-          {STAGES.map((stage) => {
-            const stageLeads = leads.filter((l) => l.stage === stage.key);
+          {COLUMNS.map((col) => {
+            const colLeads = leads.filter((l) => col.matches(l.stage) && !isEscalated(l));
             return (
-              <div key={stage.key} className="space-y-3">
+              <div key={col.key} className="space-y-3">
                 <div className="flex items-center gap-2">
-                  <div className="w-2 h-2 rounded-full" style={{ background: stage.accent }} />
-                  <span className="text-[11px] font-medium text-neutral-500 uppercase tracking-wide">{stage.label}</span>
-                  <span className="ml-auto text-[11px] text-neutral-400">{stageLeads.length}</span>
+                  <div className="w-2 h-2 rounded-full" style={{ background: col.accent }} />
+                  <span className="text-[11px] font-medium text-neutral-500 uppercase tracking-wide">{col.label}</span>
+                  <span className="ml-auto text-[11px] text-neutral-400">{colLeads.length}</span>
                 </div>
-                {loading && stageLeads.length === 0 && (
+                {loading && colLeads.length === 0 && (
                   <div className="bg-white rounded-xl border border-black/5 p-4 animate-pulse h-20" />
                 )}
-                {stageLeads.map((lead) => (
+                {colLeads.map((lead) => (
                   <LeadCard
                     key={lead.id}
                     lead={lead}
-                    accent={stage.accent}
+                    accent={col.accent}
                     qualifying={qualifying === lead.id}
                     onQualify={() => qualifyNow(lead)}
                     onOpen={() => setSelected(lead)}
@@ -159,14 +232,14 @@ export default function Cockpit() {
         </div>
 
         {/* Escalations */}
-        {leads.filter((l) => l.escalated).length > 0 && (
+        {leads.filter(isEscalated).length > 0 && (
           <div className="bg-white rounded-2xl border border-orange-200 shadow-sm p-5">
             <div className="text-[13px] font-semibold text-orange-600 mb-3">⚠ Escalations — human required</div>
             <div className="space-y-2">
-              {leads.filter((l) => l.escalated).map((l) => (
+              {leads.filter(isEscalated).map((l) => (
                 <div key={l.id} className="flex items-center justify-between text-[13px]">
-                  <span className="font-medium">{l.org}</span>
-                  <span className="text-neutral-400 text-[11px] bg-orange-50 px-2 py-0.5 rounded-full">{l.escalationReason}</span>
+                  <span className="font-medium">{l.company_name}</span>
+                  <span className="text-neutral-400 text-[11px] bg-orange-50 px-2 py-0.5 rounded-full">{l.escalation_reason ?? "escalated"}</span>
                 </div>
               ))}
             </div>
@@ -193,27 +266,43 @@ function LeadCard({ lead, accent, qualifying, onQualify, onOpen }: {
   lead: Lead; accent: string; qualifying: boolean;
   onQualify: () => void; onOpen: () => void;
 }) {
-  const canQualify = lead.stage === "signal" && !lead.escalated;
+  const canQualify = lead.stage === "new" && !!lead.person_phone && !isEscalated(lead);
+  const tier = scoreTier(lead.score);
   return (
     <div className="bg-white rounded-xl border border-black/5 shadow-sm p-4 space-y-3 cursor-pointer hover:shadow-md transition-shadow" onClick={onOpen}>
       <div className="flex items-start justify-between gap-2">
         <div>
-          <div className="text-[13px] font-semibold leading-tight">{lead.org}</div>
-          <div className="text-[11px] text-neutral-400 mt-0.5">{lead.facility}</div>
+          <div className="text-[13px] font-semibold leading-tight">{lead.company_name}</div>
+          <div className="text-[11px] text-neutral-400 mt-0.5">{[lead.street, lead.city].filter(Boolean).join(" · ")}</div>
         </div>
-        <div className="w-2 h-2 rounded-full mt-1 shrink-0" style={{ background: ICP_COLOR[lead.icp] ?? "#8e8e93" }} title={`ICP: ${lead.icp}`} />
+        <div className="w-2 h-2 rounded-full mt-1 shrink-0" style={{ background: SCORE_COLOR[tier] }} title={`Score tier: ${tier}`} />
       </div>
       <div className="flex items-center gap-3 text-[11px] text-neutral-500">
-        <span>{lead.units} units</span>
-        <span>·</span>
-        <span>{lead.city}</span>
-        <span className="ml-auto font-medium text-neutral-700" title="Estimated pipeline value — Otto will quote the exact monthly rate from the BSH catalog">~€{(lead.value / 1000).toFixed(0)}k est.</span>
+        {lead.num_units !== undefined && <><span>{lead.num_units} units</span><span>·</span></>}
+        <span>{lead.city ?? "—"}</span>
+        <span
+          className="ml-auto font-medium text-neutral-700"
+          title="Estimated pipeline value — Otto will quote the exact monthly rate from the BSH catalog"
+        >
+          ~€{(estPipelineValue(lead) / 1000).toFixed(0)}k est.
+        </span>
       </div>
-      {lead.signal && (
-        <div className="text-[10px] text-blue-600 bg-blue-50 rounded px-2 py-1 truncate">{lead.signal.source}: {lead.signal.title}</div>
+      {lead.motivation_string && (
+        <div
+          className="text-[10px] rounded px-2 py-1 truncate text-white"
+          style={{ background: MOTIVATION_COLOR[lead.motivation_string] }}
+        >
+          Hook: {lead.motivation_string}
+        </div>
       )}
-      {lead.escalated && (
-        <div className="text-[10px] text-orange-600 bg-orange-50 rounded px-2 py-1">⚠ {lead.escalationReason}</div>
+      {lead.signal_summary && (
+        <div className="text-[10px] text-blue-600 bg-blue-50 rounded px-2 py-1 truncate">{lead.signal_summary}</div>
+      )}
+      {lead.person_phone && (
+        <div className="text-[10px] text-green-700 bg-green-50 rounded px-2 py-1">✓ Consent given · {lead.person_phone}</div>
+      )}
+      {isEscalated(lead) && (
+        <div className="text-[10px] text-orange-600 bg-orange-50 rounded px-2 py-1">⚠ {lead.escalation_reason ?? "escalated"}</div>
       )}
       {canQualify && (
         <button
@@ -225,11 +314,8 @@ function LeadCard({ lead, accent, qualifying, onQualify, onOpen }: {
           {qualifying ? "Calling…" : "Qualify now →"}
         </button>
       )}
-      {lead.stage === "calling" && (
-        <div className="flex items-center gap-2 text-[12px] text-orange-600">
-          <span className="w-1.5 h-1.5 rounded-full bg-orange-500 animate-pulse" />
-          Kate is calling…
-        </div>
+      {lead.stage === "new" && !lead.person_phone && (
+        <div className="text-[10px] text-neutral-400">Awaiting landing-page consent</div>
       )}
     </div>
   );
@@ -238,51 +324,63 @@ function LeadCard({ lead, accent, qualifying, onQualify, onOpen }: {
 function LeadModal({ lead, onClose, onQualify, qualifying }: {
   lead: Lead; onClose: () => void; onQualify: () => void; qualifying: boolean;
 }) {
-  const envFields = [
-    { key: "usage_type", label: "Usage type" },
-    { key: "facility_type", label: "Facility type" },
-    { key: "num_units", label: "Units" },
-    { key: "timeline", label: "Timeline" },
-    { key: "budget_range", label: "Budget range" },
-    { key: "decision_maker", label: "Decision maker" },
+  const envFields: { key: keyof Lead; label: string }[] = [
+    { key: "facility_type",         label: "Facility type" },
+    { key: "num_units",             label: "Units" },
+    { key: "timeline",              label: "Timeline" },
+    { key: "preferred_term_months", label: "Term (months)" },
+    { key: "decision_maker",        label: "Decision maker" },
+    { key: "preferred_channel",     label: "Channel" },
   ];
-  const filled = envFields.filter((f) => lead.envelope?.[f.key]).length;
+  const bundles: { key: keyof Lead; label: string; monthly: number }[] = [
+    { key: "bundle_leader",      label: "Leader",      monthly: 42 },
+    { key: "bundle_profi",       label: "Profi",       monthly: 58 },
+    { key: "bundle_top_feature", label: "Top Feature", monthly: 80 },
+  ];
+  const filled = envFields.filter((f) => lead[f.key] !== undefined && lead[f.key] !== null && lead[f.key] !== "").length;
   const completeness = envFields.length > 0 ? filled / envFields.length : 0;
+  const bundleTotal = bundles.reduce((s, b) => s + Number(lead[b.key] ?? 0), 0);
 
   return (
     <div className="fixed inset-0 z-40 bg-black/30 flex items-center justify-center p-4" onClick={onClose}>
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg p-6 space-y-5 max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-start justify-between">
           <div>
-            <div className="font-semibold text-[16px]">{lead.org}</div>
-            <div className="text-[13px] text-neutral-400">{lead.facility} · {lead.city}</div>
+            <div className="font-semibold text-[16px]">{lead.company_name}</div>
+            <div className="text-[13px] text-neutral-400">{[lead.street, lead.postal_code, lead.city].filter(Boolean).join(" · ")}</div>
           </div>
           <button onClick={onClose} className="text-neutral-400 hover:text-neutral-700 text-xl">×</button>
         </div>
 
         {/* Signal */}
-        {lead.signal && (
+        {(lead.signal_summary || lead.signal_url) && (
           <div className="bg-blue-50 rounded-xl p-4 text-[13px]">
-            <div className="font-medium text-blue-700 mb-1">Signal · {lead.signal.source}</div>
-            <div className="text-blue-600">{lead.signal.title}</div>
-            <a href={lead.signal.url} target="_blank" rel="noopener noreferrer" className="text-[11px] text-blue-400 mt-1 block hover:underline">{lead.signal.url}</a>
+            <div className="font-medium text-blue-700 mb-1">Signal</div>
+            {lead.signal_summary && <div className="text-blue-600">{lead.signal_summary}</div>}
+            {lead.signal_url && (
+              <a href={lead.signal_url} target="_blank" rel="noopener noreferrer" className="text-[11px] text-blue-400 mt-1 block hover:underline">
+                {lead.signal_url}
+              </a>
+            )}
           </div>
         )}
 
         {/* Contact */}
-        {lead.contact && (
+        {(lead.person_name || lead.person_email) && (
           <div className="space-y-1 text-[13px]">
             <div className="text-[11px] font-medium text-neutral-400 uppercase tracking-wide">Contact</div>
-            <div className="font-medium">{lead.contact.name}</div>
-            <div className="text-neutral-500">{lead.contact.role} · {lead.contact.phone}</div>
-            {lead.contact.email && <div className="text-neutral-500">{lead.contact.email}</div>}
+            {lead.person_name && <div className="font-medium">{lead.person_name}</div>}
+            <div className="text-neutral-500">
+              {[lead.person_role, lead.person_phone].filter(Boolean).join(" · ")}
+            </div>
+            {lead.person_email && <div className="text-neutral-500">{lead.person_email}</div>}
           </div>
         )}
 
-        {/* Envelope */}
+        {/* Qualification fields */}
         <div className="space-y-2">
           <div className="flex items-center justify-between">
-            <div className="text-[11px] font-medium text-neutral-400 uppercase tracking-wide">Envelope</div>
+            <div className="text-[11px] font-medium text-neutral-400 uppercase tracking-wide">Qualification</div>
             <div className="text-[11px] text-neutral-500">{filled}/{envFields.length} fields</div>
           </div>
           <div className="w-full bg-neutral-100 rounded-full h-1.5">
@@ -290,24 +388,43 @@ function LeadModal({ lead, onClose, onQualify, qualifying }: {
           </div>
           <div className="grid grid-cols-2 gap-2">
             {envFields.map((f) => (
-              <div key={f.key} className="bg-neutral-50 rounded-lg p-2.5">
+              <div key={String(f.key)} className="bg-neutral-50 rounded-lg p-2.5">
                 <div className="text-[10px] text-neutral-400">{f.label}</div>
-                <div className="text-[13px] font-medium text-neutral-700 truncate">{String(lead.envelope?.[f.key] ?? "—")}</div>
+                <div className="text-[13px] font-medium text-neutral-700 truncate">{String(lead[f.key] ?? "—")}</div>
               </div>
             ))}
           </div>
         </div>
 
-        {/* Opt-in badge */}
-        {lead.optIn !== null && lead.optIn !== undefined && (
-          <div className={`text-[12px] px-3 py-1.5 rounded-lg font-medium ${lead.optIn ? "bg-green-50 text-green-700" : "bg-red-50 text-red-700"}`}>
-            {lead.optIn ? "✓ Opt-in confirmed" : "✗ Opted out"}
+        {/* Bundle mix */}
+        {bundleTotal > 0 && (
+          <div className="space-y-2">
+            <div className="text-[11px] font-medium text-neutral-400 uppercase tracking-wide">Bundle mix</div>
+            <div className="grid grid-cols-3 gap-2">
+              {bundles.map((b) => (
+                <div key={String(b.key)} className="bg-neutral-50 rounded-lg p-2.5">
+                  <div className="text-[10px] text-neutral-400">{b.label}</div>
+                  <div className="text-[14px] font-semibold text-neutral-700">{Number(lead[b.key] ?? 0)} ×</div>
+                  <div className="text-[10px] text-neutral-400">€{b.monthly}/mo each</div>
+                </div>
+              ))}
+            </div>
+            <div className="text-[11px] text-neutral-500 text-right">
+              Monthly rate ≈ €{monthlyRate(lead).toLocaleString()} · Total ≈ €{(estPipelineValue(lead) / 1000).toFixed(0)}k
+            </div>
+          </div>
+        )}
+
+        {/* Opt-in / consent badge */}
+        {lead.opt_in !== undefined && lead.opt_in !== null && (
+          <div className={`text-[12px] px-3 py-1.5 rounded-lg font-medium ${lead.opt_in ? "bg-green-50 text-green-700" : "bg-red-50 text-red-700"}`}>
+            {lead.opt_in ? "✓ Opt-in confirmed" : "✗ Opted out"}
           </div>
         )}
 
         {/* Actions */}
         <div className="flex gap-3 pt-2">
-          {lead.stage === "signal" && !lead.escalated && (
+          {lead.stage === "new" && lead.person_phone && !isEscalated(lead) && (
             <button onClick={onQualify} disabled={qualifying} className="flex-1 py-2.5 rounded-xl text-white text-[14px] font-medium bg-[#1d1d1f] disabled:opacity-50">
               {qualifying ? "Calling…" : "Qualify now"}
             </button>

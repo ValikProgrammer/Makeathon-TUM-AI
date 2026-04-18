@@ -11,36 +11,72 @@ function ensureDir() {
 }
 
 // ── Types ──────────────────────────────────────────────────────────────────
+// Single flat Lead — mirrors the `leads` table in seed/scout-seed.sql.
+// One row = one lead throughout the Jack → Kate → Otto pipeline.
 
-export type Stage = "signal" | "calling" | "qualified" | "offered" | "dnc";
+export type Stage =
+  | "new"
+  | "qualified"
+  | "homologation_fail"
+  | "not_interested"
+  | "escalated"
+  | "offered"
+  | "accepted"
+  | "rejected"
+  | "suppressed";
+
+export type MotivationString = "simplify" | "scale" | "optimize" | "circular";
 
 export type Lead = {
+  // Identity & lifecycle
   id: string;
-  org: string;
-  facility: string;
-  units: number;
-  city: string;
+  created_at: string;
+  updated_at: string;
   stage: Stage;
-  icp: "high" | "mid" | "low";
-  value: number;
-  signal?: { source: string; title: string; date: string; url: string; signal_id: string };
-  contact?: { name: string; role: string; phone: string; email?: string };
-  envelope?: Partial<Envelope>;
-  optIn?: boolean | null;
-  escalated?: boolean;
-  escalationReason?: string;
-  transcript?: TranscriptLine[];
-  createdAt: string;
-  updatedAt: string;
-};
 
-export type Envelope = {
-  usage_type: "residential" | "commercial";
-  facility_type: string;
-  num_units: number;
-  timeline: string;
-  budget_range: string;
-  decision_maker: string;
+  // Company (Jack, real)
+  company_name: string;
+  street?: string;
+  postal_code?: string;
+  city?: string;
+  url?: string;
+
+  // Contact
+  person_name?: string;
+  person_role?: string;
+  person_email?: string;
+  person_phone?: string; // captured on the landing page, NOT by Jack
+
+  // Jack output
+  signal_url?: string;
+  signal_summary?: string;
+  motivation_string?: MotivationString;
+  score?: number;
+
+  // Consent (landing-page submit)
+  consent_given_at?: string;
+  consent_text_version?: string;
+  consent_ip?: string;
+
+  // Kate output
+  facility_type?: string;
+  num_units?: number;
+  timeline?: string;
+  preferred_term_months?: number;
+  decision_maker?: string;
+  bundle_leader?: number;
+  bundle_profi?: number;
+  bundle_top_feature?: number;
+  opt_in?: boolean;
+  preferred_channel?: "email" | "whatsapp" | "phone";
+  contact_address?: string;
+  call_transcript_url?: string;
+  call_notes?: string;
+  escalation_reason?: string;
+
+  // Otto output
+  offer_sent_at?: string;
+  offer_accepted_at?: string;
 };
 
 export type AuditEntry = {
@@ -51,8 +87,6 @@ export type AuditEntry = {
   leadId?: string;
   meta?: Record<string, unknown>;
 };
-
-export type TranscriptLine = { who: "agent" | "contact"; line: string; ts?: number };
 
 // ── Leads ──────────────────────────────────────────────────────────────────
 
@@ -82,20 +116,24 @@ export function getLeadById(id: string): Lead | undefined {
 export function upsertLead(lead: Lead) {
   const leads = readLeads();
   const idx = leads.findIndex((l) => l.id === lead.id);
-  lead.updatedAt = new Date().toISOString();
+  lead.updated_at = new Date().toISOString();
   if (idx >= 0) leads[idx] = lead;
   else leads.unshift(lead);
   writeLeads(leads);
   return lead;
 }
 
-export function updateLeadStage(id: string, stage: Stage, extra?: Partial<Lead>) {
+export function updateLead(id: string, patch: Partial<Lead>) {
   const leads = readLeads();
   const idx = leads.findIndex((l) => l.id === id);
   if (idx < 0) return null;
-  leads[idx] = { ...leads[idx], stage, ...extra, updatedAt: new Date().toISOString() };
+  leads[idx] = { ...leads[idx], ...patch, updated_at: new Date().toISOString() };
   writeLeads(leads);
   return leads[idx];
+}
+
+export function updateLeadStage(id: string, stage: Stage, extra?: Partial<Lead>) {
+  return updateLead(id, { stage, ...(extra ?? {}) });
 }
 
 // ── Audit ──────────────────────────────────────────────────────────────────
@@ -123,10 +161,16 @@ type DncList = { phones: string[]; emails: string[]; whatsapp: string[]; organis
 function readDnc(): DncList {
   if (!fs.existsSync(DNC_FILE)) return { phones: [], emails: [], whatsapp: [], organisations: [] };
   const raw = JSON.parse(fs.readFileSync(DNC_FILE, "utf-8"));
-  return { phones: raw.phones ?? [], emails: raw.emails ?? [], whatsapp: raw.whatsapp ?? [], organisations: raw.organisations ?? [] };
+  return {
+    phones: raw.phones ?? [],
+    emails: raw.emails ?? [],
+    whatsapp: raw.whatsapp ?? [],
+    organisations: raw.organisations ?? [],
+  };
 }
 
 export function isDnc(value: string): boolean {
+  if (!value) return false;
   const dnc = readDnc();
   const v = value.toLowerCase().trim();
   return [...dnc.phones, ...dnc.emails, ...dnc.whatsapp, ...dnc.organisations]
@@ -136,25 +180,65 @@ export function isDnc(value: string): boolean {
 
 export function addDnc(type: "phone" | "email" | "whatsapp" | "org", value: string) {
   const dnc = readDnc();
-  const key = type === "org" ? "organisations" : type === "phone" ? "phones" : type === "email" ? "emails" : "whatsapp";
+  const key =
+    type === "org"
+      ? "organisations"
+      : type === "phone"
+      ? "phones"
+      : type === "email"
+      ? "emails"
+      : "whatsapp";
   if (!dnc[key].includes(value)) dnc[key].push(value);
   fs.writeFileSync(DNC_FILE, JSON.stringify({ ...dnc, updated_at: new Date().toISOString() }, null, 2));
 }
 
-// ── Seed data ─────────────────────────────────────────────────────────────
+// ── Pricing helpers (computed values, never stored) ────────────────────────
+
+export const BUNDLE_MONTHLY_EUR = { leader: 42, profi: 58, top_feature: 80 } as const;
+
+export function monthlyRate(l: Lead): number {
+  return (
+    (l.bundle_leader ?? 0) * BUNDLE_MONTHLY_EUR.leader +
+    (l.bundle_profi ?? 0) * BUNDLE_MONTHLY_EUR.profi +
+    (l.bundle_top_feature ?? 0) * BUNDLE_MONTHLY_EUR.top_feature
+  );
+}
+
+export function totalContractValue(l: Lead): number {
+  const term = l.preferred_term_months ?? 60;
+  return monthlyRate(l) * term;
+}
+
+/** Est. pipeline value per lead — rough indicator while we still don't know the mix.
+ *  Falls back to num_units × 42 × 60 when Kate hasn't filled bundles yet. */
+export function estPipelineValue(l: Lead): number {
+  const fromMix = totalContractValue(l);
+  if (fromMix > 0) return fromMix;
+  const units = l.num_units ?? 0;
+  return units * BUNDLE_MONTHLY_EUR.profi * 60;
+}
+
+// ── Seed — 10 real senior-living operators (mock person data) ─────────────
 
 function buildSeedLeads(): Lead[] {
   const now = new Date().toISOString();
-  return [
-    { id: "L-1055", org: "Kreuzbund Leipzig", facility: "Haus Eichenblick", units: 46, city: "Leipzig", stage: "dnc", icp: "high", value: 23184, createdAt: now, updatedAt: now },
-    { id: "L-1047", org: "Diakoniewerk Munich", facility: "Haidhausen Senior Residence", units: 42, city: "Munich", stage: "offered", icp: "high", value: 21168, contact: { name: "Dr. Klaus Weber", role: "Facility Director", phone: "+49891234567", email: "weber@diakoniewerk.de" }, envelope: { usage_type: "residential", facility_type: "senior_care", num_units: 42, timeline: "Q3 2026", budget_range: "2000-5000", decision_maker: "Dr. Klaus Weber, Director" }, optIn: true, createdAt: now, updatedAt: now },
-    { id: "L-1048", org: "Caritas Freiburg", facility: "St. Elisabeth", units: 68, city: "Freiburg", stage: "qualified", icp: "high", value: 34272, contact: { name: "Dr. Maria Wehner", role: "Managing Director", phone: "+4976112345", email: "wehner@caritas-freiburg.de" }, signal: { source: "TED", title: "Küchengeräte Ausstattung Wohnbereich", date: "2026-04-18", url: "https://ted.europa.eu/notice/123", signal_id: "sig_20260418_0002" }, createdAt: now, updatedAt: now },
-    { id: "L-1049", org: "AWO Hannover", facility: "Haus am Park", units: 34, city: "Hannover", stage: "qualified", icp: "mid", value: 17136, escalated: true, escalationReason: "budget_unclear", contact: { name: "Thomas Bauer", role: "Facility Manager", phone: "+4951198765" }, createdAt: now, updatedAt: now },
-    { id: "L-TEST-1", org: "Seniorenheim Vova", facility: "Haus Vova", units: 40, city: "Munich", stage: "signal", icp: "high", value: 20160, contact: { name: "Vova", role: "Facility Manager", phone: "+4916095428835" }, signal: { source: "TED", title: "Küchengeräte Ausstattung Wohnbereich", date: "2026-04-18", url: "https://ted.europa.eu/test-1", signal_id: "sig_test_0001" }, createdAt: now, updatedAt: now },
-    { id: "L-TEST-2", org: "Seniorenheim Mikhail", facility: "Haus Mikhail", units: 35, city: "Berlin", stage: "signal", icp: "high", value: 17640, contact: { name: "Mikhail", role: "Facility Director", phone: "+4915753254948" }, signal: { source: "BundDe", title: "Küchengeräte für Wohnbereich", date: "2026-04-18", url: "https://bund.de/test-2", signal_id: "sig_test_0002" }, createdAt: now, updatedAt: now },
-    { id: "L-1050", org: "Johanniter Stift Cologne", facility: "Haus Lindenthal", units: 56, city: "Cologne", stage: "signal", icp: "high", value: 28224, signal: { source: "BundDe", title: "Küchengeräte für Wohnbereich", date: "2026-04-18", url: "https://bund.de/987", signal_id: "sig_20260418_0004" }, createdAt: now, updatedAt: now },
-    { id: "L-1053", org: "Malteser Nuremberg", facility: "Haus St. Katharina", units: 44, city: "Nuremberg", stage: "signal", icp: "high", value: 22176, signal: { source: "TED", title: "Küchengeräte Malteser", date: "2026-04-18", url: "https://ted.europa.eu/555", signal_id: "sig_20260418_0005" }, createdAt: now, updatedAt: now },
-    { id: "L-1052", org: "Evangelische Stiftung Bonn", facility: "Haus am Rhein", units: 38, city: "Bonn", stage: "signal", icp: "mid", value: 19152, signal: { source: "DNK", title: "DNK Nachhaltigkeitsbericht 2025", date: "2026-04-18", url: "https://dnk.de/bonn", signal_id: "sig_20260418_0006" }, createdAt: now, updatedAt: now },
-    { id: "L-1054", org: "Paritätischer Essen", facility: "Wohnpark Ruhr", units: 28, city: "Essen", stage: "signal", icp: "low", value: 14112, signal: { source: "Indeed", title: "Haustechnik Betreutes Wohnen", date: "2026-04-18", url: "https://indeed.de/456", signal_id: "sig_20260418_0007" }, createdAt: now, updatedAt: now },
+  const seeds: Omit<Lead, "id" | "created_at" | "updated_at" | "stage">[] = [
+    { company_name: "Evangelische Heimstiftung GmbH",                  street: "Hackstraße 12",             postal_code: "70190", city: "Stuttgart", url: "https://www.ev-heimstiftung.de/",         person_name: "Dr. Stefan Bürkle",   person_role: "Leitung Einkauf",        person_email: "s.buerkle@ev-heimstiftung.de" },
+    { company_name: "Pro Seniore Residenz Kempten",                    street: "Stiftskellerweg 43",        postal_code: "87439", city: "Kempten",   url: "https://kempten.pro-seniore.de/",         person_name: "Martina Hoffmann",    person_role: "Hausleitung",            person_email: "m.hoffmann@pro-seniore.com" },
+    { company_name: "Dorea GmbH",                                      street: "Siemensdamm 62",            postal_code: "13627", city: "Berlin",    url: "https://www.dorea.de/",                   person_name: "Andreas Richter",     person_role: "Geschäftsführer",        person_email: "a.richter@dorea.de" },
+    { company_name: "DOMIZILIUM GmbH",                                 street: "Wilhelm-Köhler-Straße 50",  postal_code: "86956", city: "Schongau",  url: "https://www.domizilium.de/",              person_name: "Julia Schwarz",       person_role: "Einrichtungsleitung",    person_email: "j.schwarz@domizilium.de" },
+    { company_name: "AWO Arbeiterwohlfahrt",                           street: "Blücherstraße 62/63",       postal_code: "10961", city: "Berlin",    url: "https://www.awo.org/",                    person_name: "Thomas Weber",        person_role: "Regionalleitung",        person_email: "t.weber@awo.org" },
+    { company_name: "BRK SeniorenWohnen",                              street: "Garmischer Straße 19-21",   postal_code: "81373", city: "München",   url: "https://www.brk-seniorenwohnen.de/",      person_name: "Dr. Christine Bauer", person_role: "Leitung Hauswirtschaft", person_email: "c.bauer@brk-seniorenwohnen.de" },
+    { company_name: "Tertianum Service GmbH",                          street: "Hackescher Markt 2-3",      postal_code: "10178", city: "Berlin",    url: "https://tertianum-premiumresidences.de/", person_name: "Michael Krause",      person_role: "Prokurist",              person_email: "m.krause@tertianum-premiumresidences.de" },
+    { company_name: "Caritas Trägergesellschaft St. Elisabeth gGmbH",  street: "Von-Hompesch-Straße 1",     postal_code: "53123", city: "Bonn",      url: "https://www.cts-mbh.de/",                 person_name: "Petra Müller",        person_role: "Leitung Einkauf",        person_email: "p.mueller@cts-mbh.de" },
+    { company_name: "EMVIA Living GmbH",                               street: "Aachener Straße 1053-1055", postal_code: "50858", city: "Köln",      url: "https://www.emvia.de/",                   person_name: "Frank Schmidt",       person_role: "Geschäftsführer",        person_email: "f.schmidt@emvia.de" },
+    { company_name: "Augustinum Gruppe",                               street: "Stiftsbogen 74",            postal_code: "81375", city: "München",   url: "https://www.augustinum.de/",              person_name: "Sabine Fischer",      person_role: "Hausleitung",            person_email: "s.fischer@augustinum.de" },
   ];
+  return seeds.map((s, i) => ({
+    id: `L-${1000 + i + 1}`,
+    created_at: now,
+    updated_at: now,
+    stage: "new" as Stage,
+    ...s,
+  }));
 }
