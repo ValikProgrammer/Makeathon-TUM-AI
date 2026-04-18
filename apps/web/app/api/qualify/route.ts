@@ -27,28 +27,26 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "contact is on DNC list" }, { status: 403 });
   }
 
-  // Guardrail: call window Mon-Fri 09:00–17:00 CET
-  const hour = new Date().getUTCHours() + 1; // rough CET
-  const day = new Date().getUTCDay(); // 0=Sun, 6=Sat
-  if (day === 0 || day === 6 || hour < 9 || hour >= 17) {
-    appendAudit({ timestamp: new Date().toISOString(), agent: "guardrail", event: "guardrail.call_window_block", leadId: lead_id, meta: { hour, day } });
-    return NextResponse.json({ error: "outside call window (Mon-Fri 09:00-17:00 CET)" }, { status: 403 });
-  }
-
   // Trigger HappyRobot Caller workflow
   if (HAPPYROBOT_CALLER_WEBHOOK) {
-    // HappyRobot voice trigger accepts phone_number as primary field.
-    // Additional context is passed so the voice agent prompt can reference it via variables.
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "";
+    // Pick hook based on ICP and available signal
+    const hook = lead.icp === "high" ? "simplify" : lead.icp === "mid" ? "optimize" : "scale";
+
     const payload: Record<string, unknown> = {
-      phone_number: lead.contact?.phone ?? "",
-      // Extra fields — available as {{variable}} in the HR prompt if the workflow is configured for them
+      to: lead.contact?.phone ?? "",
+      contact_id: lead.id,
       lead_id: lead.id,
-      org: lead.org,
-      city: lead.city,
-      signal_summary: lead.signal?.title ?? "",
-      signal_source: lead.signal?.source ?? "",
       contact_name: lead.contact?.name ?? "",
       contact_role: lead.contact?.role ?? "",
+      facility_name: lead.facility ?? lead.org,
+      org: lead.org,
+      city: lead.city,
+      signal_summary: lead.signal?.title ?? `new senior-living facility in ${lead.city}`,
+      signal_source: lead.signal?.source ?? "",
+      hook,
+      campaign_id: `makeathon-2026`,
+      callback_url: appUrl ? `${appUrl}/api/callback` : "",
     };
 
     const hrResponse = await fetch(HAPPYROBOT_CALLER_WEBHOOK, {
