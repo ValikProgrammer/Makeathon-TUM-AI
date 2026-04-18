@@ -21,3 +21,7 @@ apps/web/data/audit.json
 
 # Worktree
 .worktrees/
+
+
+# Cache
+**/__pycache__/
