@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>lease-a-kitchen — Outbound Workflow</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    background: #0a0a0a;
+    color: #e8e8e8;
+    padding: 48px 32px;
+    min-height: 100vh;
+  }
+  .container { max-width: 1280px; margin: 0 auto; }
+  header { margin-bottom: 48px; }
+  h1 {
+    font-size: 32px;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    margin-bottom: 8px;
+  }
+  .subtitle { color: #888; font-size: 15px; }
+  .legal-badge {
+    display: inline-block;
+    background: #1a3a1a;
+    color: #6ee7b7;
+    padding: 4px 10px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: 600;
+    margin-top: 12px;
+    border: 1px solid #2d5a2d;
+  }
+
+  .flow {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+    margin-bottom: 48px;
+    position: relative;
+  }
+  @media (max-width: 900px) { .flow { grid-template-columns: 1fr; } }
+
+  .step {
+    background: #141414;
+    border: 1px solid #2a2a2a;
+    border-radius: 12px;
+    padding: 24px;
+    position: relative;
+    transition: border-color 0.2s;
+  }
+  .step:hover { border-color: #444; }
+  .step-num {
+    position: absolute;
+    top: -12px;
+    left: 20px;
+    background: #0a0a0a;
+    color: #888;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    padding: 4px 10px;
+    border: 1px solid #2a2a2a;
+    border-radius: 4px;
+  }
+  .agent {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: #1a1a2e;
+    border: 1px solid #3a3a5e;
+    border-radius: 6px;
+    padding: 6px 12px;
+    font-size: 13px;
+    font-weight: 600;
+    margin-bottom: 16px;
+  }
+  .agent-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #60a5fa;
+  }
+  .agent.jack .agent-dot { background: #fbbf24; }
+  .agent.kate .agent-dot { background: #f472b6; }
+  .agent.otto .agent-dot { background: #34d399; }
+  .step h3 {
+    font-size: 17px;
+    font-weight: 600;
+    margin-bottom: 10px;
+    letter-spacing: -0.01em;
+  }
+  .step p { color: #aaa; font-size: 13px; line-height: 1.6; margin-bottom: 12px; }
+  .step ul { list-style: none; font-size: 12px; color: #999; }
+  .step ul li { padding: 3px 0; padding-left: 14px; position: relative; }
+  .step ul li::before {
+    content: "→";
+    position: absolute;
+    left: 0;
+    color: #555;
+  }
+  .legal {
+    margin-top: 16px;
+    padding-top: 12px;
+    border-top: 1px solid #2a2a2a;
+    font-size: 11px;
+    color: #6ee7b7;
+  }
+  .legal.warn { color: #fbbf24; }
+  .legal strong { color: inherit; }
+
+  .arrow {
+    position: absolute;
+    top: 50%;
+    right: -14px;
+    transform: translateY(-50%);
+    color: #444;
+    font-size: 20px;
+    z-index: 2;
+  }
+  @media (max-width: 900px) { .arrow { display: none; } }
+
+  .legend {
+    background: #141414;
+    border: 1px solid #2a2a2a;
+    border-radius: 12px;
+    padding: 24px;
+    margin-bottom: 32px;
+  }
+  .legend h2 { font-size: 15px; margin-bottom: 16px; color: #fff; }
+  .legend-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+  }
+  @media (max-width: 700px) { .legend-grid { grid-template-columns: 1fr; } }
+  .legend-item {
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+  }
+  .legend-item .dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    margin-top: 4px;
+    flex-shrink: 0;
+  }
+  .legend-item .dot.jack { background: #fbbf24; }
+  .legend-item .dot.kate { background: #f472b6; }
+  .legend-item .dot.otto { background: #34d399; }
+  .legend-item .name { font-weight: 600; font-size: 13px; color: #fff; }
+  .legend-item .role { font-size: 12px; color: #999; margin-top: 2px; }
+
+  .compliance {
+    background: linear-gradient(135deg, #0d1f0d 0%, #0a1a14 100%);
+    border: 1px solid #2d5a2d;
+    border-radius: 12px;
+    padding: 24px;
+  }
+  .compliance h2 {
+    font-size: 15px;
+    margin-bottom: 16px;
+    color: #6ee7b7;
+  }
+  .compliance-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+  }
+  @media (max-width: 900px) { .compliance-grid { grid-template-columns: repeat(2, 1fr); } }
+  @media (max-width: 500px) { .compliance-grid { grid-template-columns: 1fr; } }
+  .compliance-item {
+    background: rgba(0,0,0,0.3);
+    border-radius: 8px;
+    padding: 12px;
+    font-size: 12px;
+  }
+  .compliance-item .tag {
+    color: #6ee7b7;
+    font-weight: 700;
+    font-size: 10px;
+    letter-spacing: 0.08em;
+    margin-bottom: 4px;
+  }
+  .compliance-item .text { color: #ccc; line-height: 1.5; }
+
+  footer {
+    margin-top: 48px;
+    padding-top: 24px;
+    border-top: 1px solid #2a2a2a;
+    font-size: 11px;
+    color: #666;
+    text-align: center;
+  }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <header>
+    <h1>lease-a-kitchen — Agentic Outbound Workflow</h1>
+    <div class="subtitle">Multi-agent prospecting pipeline · GDPR + UWG §7 compliant by design</div>
+    <div class="legal-badge">✓ Inverted contact direction avoids cold-call restrictions</div>
+  </header>
+
+  <section class="legend">
+    <h2>AGENTS</h2>
+    <div class="legend-grid">
+      <div class="legend-item">
+        <div class="dot jack"></div>
+        <div>
+          <div class="name">Jack</div>
+          <div class="role">Research agent — finds prospects worth contacting</div>
+        </div>
+      </div>
+      <div class="legend-item">
+        <div class="dot kate"></div>
+        <div>
+          <div class="name">Kate</div>
+          <div class="role">Orchestration + voice agent — triggers outreach, qualifies, follows up</div>
+        </div>
+      </div>
+      <div class="legend-item">
+        <div class="dot otto"></div>
+        <div>
+          <div class="name">Otto</div>
+          <div class="role">Offer agent — generates tailored proposals</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="flow">
+
+    <div class="step">
+      <div class="step-num">STEP 1</div>
+      <div class="agent jack"><span class="agent-dot"></span>Jack</div>
+      <h3>Prospect Discovery</h3>
+      <p>Scans public sources for high-intent B2B signals — only leads worth contacting pass the filter.</p>
+      <ul>
+        <li>Commercial registry</li>
+        <li>Trade press &amp; openings</li>
+        <li>Job boards &amp; funding news</li>
+        <li>Per-lead signal documented</li>
+      </ul>
+      <div class="legal">
+        <strong>GDPR Art. 6(1)(f)</strong> · legitimate interest, B2B public sources
+      </div>
+      <div class="arrow">▶</div>
+    </div>
+
+    <div class="step">
+      <div class="step-num">STEP 2</div>
+      <div class="agent kate"><span class="agent-dot"></span>Kate</div>
+      <h3>Postcard → QR → Call-me</h3>
+      <p>Personalized postcard ships with QR code. Prospect scans → landing page → consents → requests call-back.</p>
+      <ul>
+        <li>Postcard with Art. 14 notice</li>
+        <li>Landing page with AI-consent checkbox</li>
+        <li>Inbound call to Kate (voice AI)</li>
+        <li>Qualification in &lt;3 min</li>
+      </ul>
+      <div class="legal">
+        <strong>UWG §7 N/A</strong> · postal + inbound = no marketing restriction
+      </div>
+      <div class="arrow">▶</div>
+    </div>
+
+    <div class="step">
+      <div class="step-num">STEP 3</div>
+      <div class="agent otto"><span class="agent-dot"></span>Otto</div>
+      <h3>Offer Generation</h3>
+      <p>Based on qualification data, Otto matches available kitchens and drafts a tailored proposal.</p>
+      <ul>
+        <li>Kitchen inventory match</li>
+        <li>Pricing by dates &amp; scope</li>
+        <li>Terms &amp; availability</li>
+        <li>PDF + email-ready format</li>
+      </ul>
+      <div class="legal">
+        <strong>Internal processing</strong> · no external comms, data-minimized
+      </div>
+      <div class="arrow">▶</div>
+    </div>
+
+    <div class="step">
+      <div class="step-num">STEP 4</div>
+      <div class="agent kate"><span class="agent-dot"></span>Kate</div>
+      <h3>Delivery &amp; Follow-up</h3>
+      <p>Kate sends the offer via email and follows up by phone — within the consent already given.</p>
+      <ul>
+        <li>Email with offer + opt-out</li>
+        <li>Up to 2 follow-up calls max</li>
+        <li>AI disclosure in every call</li>
+        <li>Instant suppression on objection</li>
+      </ul>
+      <div class="legal">
+        <strong>Pre-contractual comms</strong> · outside UWG §7 advertising scope
+      </div>
+    </div>
+
+  </section>
+
+  <section class="compliance">
+    <h2>✓ LOAD-BEARING COMPLIANCE CONTROLS</h2>
+    <div class="compliance-grid">
+      <div class="compliance-item">
+        <div class="tag">CONSENT</div>
+        <div class="text">Landing page checkbox explicitly covers AI-conducted calls. Logged with IP, timestamp, version.</div>
+      </div>
+      <div class="compliance-item">
+        <div class="tag">DISCLOSURE</div>
+        <div class="text">Kate self-identifies as AI within the first seconds of every call (AI Act Art. 50).</div>
+      </div>
+      <div class="compliance-item">
+        <div class="tag">INFO DUTY</div>
+        <div class="text">Article 14 GDPR notice printed on every postcard — source, controller, purpose, objection.</div>
+      </div>
+      <div class="compliance-item">
+        <div class="tag">FREQUENCY</div>
+        <div class="text">Hard cap: 2 follow-up calls per offer. Immediate suppression on verbal objection.</div>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    orgaloom GmbH · Hackathon build · 2026-04-18 · See legal_assessment.md for full analysis
+  </footer>
+
+</div>
+</body>
+</html>

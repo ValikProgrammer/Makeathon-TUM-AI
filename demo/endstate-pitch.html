@@ -9,7 +9,7 @@
   html, body { height: 100%; overflow: hidden; }
   body { font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
   .monospace { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
-  .slide { position: absolute; inset: 0; display: flex; opacity: 0; pointer-events: none; transition: opacity .3s ease; }
+  .slide { position: absolute; inset: 0; display: flex; opacity: 0; pointer-events: none; transition: opacity .3s ease; overflow: auto; }
   .slide.active { opacity: 1; pointer-events: auto; }
   .pulse-dot { box-shadow: 0 0 0 0 rgba(34,197,94,.7); animation: pulse 2s infinite; }
   @keyframes pulse {
@@ -18,6 +18,97 @@
     100% { box-shadow: 0 0 0 0 rgba(34,197,94,0); }
   }
   .kbd { font-family: ui-monospace, monospace; font-size: 11px; padding: 2px 6px; border: 1px solid #d4d4d4; border-bottom-width: 2px; border-radius: 4px; background: #fafafa; color: #525252; }
+
+  /* Postcard */
+  .postcard {
+    background: linear-gradient(135deg, #fefbf3 0%, #f5ede0 100%);
+    border-radius: 8px;
+    box-shadow: 0 20px 40px -10px rgba(0,0,0,0.15), 0 4px 12px rgba(0,0,0,0.08);
+    padding: 18px;
+    position: relative;
+    font-family: "Georgia", serif;
+    color: #2a2a2a;
+    transform: rotate(-2deg);
+  }
+  .postcard::before {
+    content: "";
+    position: absolute;
+    inset: 6px;
+    border: 1px dashed #c9b896;
+    border-radius: 4px;
+    pointer-events: none;
+  }
+  .qr-box {
+    width: 70px; height: 70px;
+    background:
+      conic-gradient(from 0deg at 50% 50%, #000 25%, #fff 25% 50%, #000 50% 75%, #fff 75%),
+      repeating-conic-gradient(#000 0 25%, #fff 0 50%);
+    background-size: 10px 10px, 100% 100%;
+    border: 2px solid #000;
+    position: relative;
+  }
+  .qr-box::before, .qr-box::after {
+    content: ""; position: absolute;
+    width: 16px; height: 16px;
+    background: #fff;
+    border: 3px solid #000;
+  }
+  .qr-box::before { top: 4px; left: 4px; }
+  .qr-box::after { top: 4px; right: 4px; }
+
+  /* Phone frame */
+  .phone {
+    width: 220px;
+    height: 440px;
+    background: #1a1a1a;
+    border-radius: 28px;
+    padding: 8px;
+    box-shadow: 0 25px 50px -12px rgba(0,0,0,0.35);
+    position: relative;
+  }
+  .phone::before {
+    content: "";
+    position: absolute;
+    top: 14px; left: 50%;
+    transform: translateX(-50%);
+    width: 60px; height: 6px;
+    background: #000;
+    border-radius: 3px;
+    z-index: 2;
+  }
+  .phone-screen {
+    background: #fff;
+    border-radius: 22px;
+    height: 100%;
+    overflow: hidden;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* Waveform */
+  .wave {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+    height: 24px;
+  }
+  .wave span {
+    display: block;
+    width: 3px;
+    background: currentColor;
+    border-radius: 2px;
+    animation: wave 1.2s ease-in-out infinite;
+  }
+  .wave span:nth-child(1) { animation-delay: 0s; height: 40%; }
+  .wave span:nth-child(2) { animation-delay: 0.1s; height: 70%; }
+  .wave span:nth-child(3) { animation-delay: 0.2s; height: 90%; }
+  .wave span:nth-child(4) { animation-delay: 0.3s; height: 60%; }
+  .wave span:nth-child(5) { animation-delay: 0.4s; height: 80%; }
+  .wave span:nth-child(6) { animation-delay: 0.5s; height: 50%; }
+  .wave span:nth-child(7) { animation-delay: 0.6s; height: 75%; }
+  .wave span:nth-child(8) { animation-delay: 0.7s; height: 45%; }
+  @keyframes wave { 0%, 100% { transform: scaleY(0.6); } 50% { transform: scaleY(1.2); } }
 </style>
 </head>
 <body class="bg-neutral-50 text-neutral-900">
@@ -28,8 +119,8 @@
   <section class="slide active bg-gradient-to-br from-neutral-900 to-neutral-800 text-white">
     <div class="m-auto max-w-4xl px-12 text-center">
       <div class="text-[11px] uppercase tracking-[0.3em] text-neutral-400 mb-8">TUM.ai Makeathon · HappyRobot Challenge</div>
-      <h1 class="text-7xl font-bold tracking-tight leading-none">No spam.<br/>High precision.</h1>
-      <p class="mt-10 text-2xl text-neutral-300 leading-relaxed">Three autonomous B2B sales agents.<br/>A human only when it matters.</p>
+      <h1 class="text-7xl font-bold tracking-tight leading-none">Cold outbound<br/>is dead in Germany.</h1>
+      <p class="mt-10 text-2xl text-neutral-300 leading-relaxed">So we inverted the direction.<br/>Three agents make the prospect call us.</p>
       <div class="mt-16 flex items-center justify-center gap-6 text-sm text-neutral-400">
         <span>Team <span class="text-white font-medium">undeterministic tornado</span></span>
         <span>·</span>
@@ -44,227 +135,428 @@
   <section class="slide bg-white">
     <div class="m-auto max-w-5xl px-12">
       <div class="text-[11px] uppercase tracking-[0.3em] text-neutral-500 mb-4">The problem</div>
-      <h2 class="text-5xl font-bold tracking-tight leading-tight mb-10">B2B outbound is broken.</h2>
+      <h2 class="text-5xl font-bold tracking-tight leading-tight mb-10">German law killed B2B outbound.</h2>
       <div class="grid grid-cols-3 gap-8">
         <div class="border-l-2 border-red-400 pl-5">
-          <div class="text-5xl font-bold text-red-600 tracking-tight">&lt;1%</div>
-          <div class="mt-2 text-neutral-600 text-sm leading-snug">Cold email response rate. LinkedIn follows the same curve.</div>
-        </div>
-        <div class="border-l-2 border-red-400 pl-5">
-          <div class="text-5xl font-bold text-red-600 tracking-tight">30 min</div>
-          <div class="mt-2 text-neutral-600 text-sm leading-snug">Research + first-touch qualification per lead. Doesn't scale.</div>
-        </div>
-        <div class="border-l-2 border-red-400 pl-5">
           <div class="text-5xl font-bold text-red-600 tracking-tight">§7 UWG</div>
-          <div class="mt-2 text-neutral-600 text-sm leading-snug">Cold-calling regulated. One careless campaign = abmahnung.</div>
+          <div class="mt-2 text-neutral-600 text-sm leading-snug">Cold calls need consent. AI voice calls need <em>explicit</em> consent — always.</div>
+        </div>
+        <div class="border-l-2 border-red-400 pl-5">
+          <div class="text-5xl font-bold text-red-600 tracking-tight">&lt;1%</div>
+          <div class="mt-2 text-neutral-600 text-sm leading-snug">Cold email response rate. LinkedIn and WhatsApp follow the same curve — and violate ToS.</div>
+        </div>
+        <div class="border-l-2 border-red-400 pl-5">
+          <div class="text-5xl font-bold text-red-600 tracking-tight">300k €</div>
+          <div class="mt-2 text-neutral-600 text-sm leading-snug">Max. fine per violation. One careless campaign ends the company.</div>
         </div>
       </div>
       <div class="mt-12 text-xl text-neutral-700 leading-relaxed max-w-3xl">
         Meanwhile, buyers publish intent constantly —
-        <span class="font-medium text-neutral-900">tenders, building permits, sustainability reports, job posts</span> —
-        that no one converts into timely, relevant outreach.
+        <span class="font-medium text-neutral-900">openings, funding, job posts, permits</span> —
+        that no one converts into timely, legal outreach.
       </div>
     </div>
   </section>
 
-  <!-- 3 · Solution -->
+  <!-- 3 · Solution · The Flow with visuals -->
   <section class="slide bg-neutral-50">
-    <div class="m-auto max-w-6xl px-12 w-full">
+    <div class="m-auto max-w-7xl px-12 w-full">
       <div class="text-[11px] uppercase tracking-[0.3em] text-neutral-500 mb-4">Our solution</div>
-      <h2 class="text-5xl font-bold tracking-tight leading-tight mb-12">Three agents. One purpose.</h2>
+      <h2 class="text-5xl font-bold tracking-tight leading-tight mb-3">Invert the direction.</h2>
+      <p class="text-neutral-600 mb-10">Postal outreach is §7-free. The prospect opens the door — consent carries every further step.</p>
 
-      <div class="grid grid-cols-3 gap-6">
-        <div class="bg-white rounded-xl p-6 border border-neutral-200">
-          <div class="flex items-center gap-2 mb-4">
-            <span class="px-2 py-0.5 text-[10px] font-semibold tracking-wider uppercase text-white bg-blue-600 rounded">Scout</span>
-            <span class="w-2 h-2 rounded-full bg-emerald-500 pulse-dot"></span>
+      <div class="grid grid-cols-4 gap-4">
+
+        <!-- Jack scout -->
+        <div class="bg-white rounded-xl p-5 border border-neutral-200 flex flex-col">
+          <div class="flex items-center gap-2 mb-3">
+            <span class="px-2 py-0.5 text-[10px] font-semibold tracking-wider uppercase text-white bg-amber-500 rounded">Jack</span>
+            <span class="text-[10px] text-neutral-400 monospace">step 1</span>
           </div>
-          <h3 class="text-xl font-semibold mb-2">Only act on signals</h3>
-          <p class="text-sm text-neutral-600 leading-relaxed">Watches TED, DNK, public tenders 24/7. Creates a lead <em>only</em> with documented intent — never from a bought list.</p>
+          <div class="bg-neutral-900 rounded-md p-3 monospace text-[10px] text-neutral-300 mb-3 flex-1">
+            <div class="text-amber-400">scanning signals…</div>
+            <div class="mt-1">kfw_funding ✓</div>
+            <div>per-unit deploy ✓</div>
+            <div>homolog. gate ✓</div>
+            <div class="mt-2 text-emerald-400">score: 87.3</div>
+            <div class="text-neutral-500">→ trigger postcard</div>
+          </div>
+          <h3 class="text-base font-semibold mb-1">Scout &amp; score</h3>
+          <p class="text-xs text-neutral-600 leading-snug">ICP gate first, then 5 weighted dimensions.</p>
         </div>
 
-        <div class="bg-white rounded-xl p-6 border border-neutral-200">
-          <div class="flex items-center gap-2 mb-4">
-            <span class="px-2 py-0.5 text-[10px] font-semibold tracking-wider uppercase text-white bg-amber-600 rounded">Caller</span>
-            <span class="w-2 h-2 rounded-full bg-emerald-500 pulse-dot"></span>
+        <!-- Kate postcard -->
+        <div class="bg-white rounded-xl p-5 border border-neutral-200 flex flex-col">
+          <div class="flex items-center gap-2 mb-3">
+            <span class="px-2 py-0.5 text-[10px] font-semibold tracking-wider uppercase text-white bg-pink-500 rounded">Kate</span>
+            <span class="text-[10px] text-neutral-400 monospace">step 2</span>
           </div>
-          <h3 class="text-xl font-semibold mb-2">Voice with consent</h3>
-          <p class="text-sm text-neutral-600 leading-relaxed">AI voice agent discloses itself, references the signal as the reason to call, qualifies 6 fields, asks permission to follow up.</p>
+          <div class="flex-1 flex items-center justify-center mb-3">
+            <div class="postcard w-full" style="font-size: 9px;">
+              <div class="font-bold mb-1" style="font-size: 11px;">Dear Ms. Klein,</div>
+              <div class="leading-tight mb-2">We saw your new senior residence opening in Munich this August. 120 units — we can outfit each with washer, fridge and dishwasher.</div>
+              <div class="flex items-center gap-2">
+                <div class="qr-box" style="width: 40px; height: 40px;"></div>
+                <div class="text-[9px]">scan for<br/>instant match</div>
+              </div>
+            </div>
+          </div>
+          <h3 class="text-base font-semibold mb-1">Postcard + QR</h3>
+          <p class="text-xs text-neutral-600 leading-snug">Hyper-personal. §7-free channel.</p>
         </div>
 
-        <div class="bg-white rounded-xl p-6 border border-neutral-200">
-          <div class="flex items-center gap-2 mb-4">
-            <span class="px-2 py-0.5 text-[10px] font-semibold tracking-wider uppercase text-white bg-emerald-600 rounded">Closer</span>
-            <span class="w-2 h-2 rounded-full bg-neutral-300"></span>
+        <!-- Kate voice -->
+        <div class="bg-white rounded-xl p-5 border border-neutral-200 flex flex-col">
+          <div class="flex items-center gap-2 mb-3">
+            <span class="px-2 py-0.5 text-[10px] font-semibold tracking-wider uppercase text-white bg-pink-500 rounded">Kate</span>
+            <span class="text-[10px] text-neutral-400 monospace">step 3</span>
           </div>
-          <h3 class="text-xl font-semibold mb-2">Deliver only on opt-in</h3>
-          <p class="text-sm text-neutral-600 leading-relaxed">Sends the tailored offer via email or WhatsApp — only if the prospect explicitly asked for it. Escalates edge cases to a human.</p>
+          <div class="bg-gradient-to-br from-pink-50 to-rose-50 rounded-md p-3 mb-3 flex-1 flex flex-col items-center justify-center">
+            <div class="wave text-pink-500 mb-2"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></div>
+            <div class="text-[10px] text-pink-700 font-medium">inbound call</div>
+            <div class="text-[9px] text-neutral-500 mt-1">"Hi, this is Kate, an AI"</div>
+          </div>
+          <h3 class="text-base font-semibold mb-1">Voice &amp; qualify</h3>
+          <p class="text-xs text-neutral-600 leading-snug">Prospect calls. Kate discloses, qualifies.</p>
         </div>
+
+        <!-- Otto offer -->
+        <div class="bg-white rounded-xl p-5 border border-neutral-200 flex flex-col">
+          <div class="flex items-center gap-2 mb-3">
+            <span class="px-2 py-0.5 text-[10px] font-semibold tracking-wider uppercase text-white bg-emerald-500 rounded">Otto</span>
+            <span class="text-[10px] text-neutral-400 monospace">step 4</span>
+          </div>
+          <div class="bg-white border border-neutral-300 rounded-md p-2 mb-3 flex-1 shadow-sm" style="font-size: 8px;">
+            <div class="border-b border-neutral-200 pb-1 mb-1">
+              <div class="font-bold text-neutral-700">Your lease-a-kitchen offer</div>
+              <div class="text-neutral-400">to: ms.meier@newrestaurant.de</div>
+            </div>
+            <div class="text-neutral-600 leading-tight">Production kitchen · Munich Ost<br/>12.08.—30.11.2026<br/><span class="font-semibold">€ 8,400 / month</span></div>
+            <div class="mt-1 bg-emerald-500 text-white text-center rounded py-0.5 text-[8px]">Accept</div>
+          </div>
+          <h3 class="text-base font-semibold mb-1">Tailored offer</h3>
+          <p class="text-xs text-neutral-600 leading-snug">Otto drafts, Kate sends + follows up.</p>
+        </div>
+
       </div>
 
       <div class="mt-10 flex items-center justify-center gap-3 text-sm text-neutral-500">
         <span class="monospace">Signal</span>
         <span>→</span>
+        <span class="monospace">Postcard</span>
+        <span>→</span>
+        <span class="monospace">Consent</span>
+        <span>→</span>
         <span class="monospace">Voice</span>
         <span>→</span>
-        <span class="monospace">Permission</span>
-        <span>→</span>
-        <span class="monospace">Offer</span>
-        <span>→</span>
-        <span class="monospace font-semibold text-neutral-900">Human only on escalation</span>
+        <span class="monospace font-semibold text-neutral-900">Offer</span>
       </div>
     </div>
   </section>
 
-  <!-- 4 · Demo -->
+  <!-- 4 · The Artifacts · Visual Deep Dive -->
+  <section class="slide bg-white">
+    <div class="m-auto max-w-7xl px-12 w-full">
+      <div class="text-[11px] uppercase tracking-[0.3em] text-neutral-500 mb-4">The artifacts</div>
+      <h2 class="text-5xl font-bold tracking-tight leading-tight mb-10">What the prospect actually sees.</h2>
+
+      <div class="grid grid-cols-3 gap-8 items-start">
+
+        <!-- Big postcard -->
+        <div>
+          <div class="text-[10px] uppercase tracking-wider text-neutral-500 mb-3">① The postcard in the mailbox</div>
+          <div class="postcard" style="transform: rotate(-3deg);">
+            <div class="font-bold text-base mb-2">Dear Ms. Klein,</div>
+            <div class="text-sm leading-relaxed mb-3">
+              Congratulations on the new Diakonie senior residence in Munich-Ost — 120 units, opening August. We lease the BSH appliances for each apartment: washer, dryer, fridge, dishwasher. Household-certified, per-unit.
+            </div>
+            <div class="text-sm leading-relaxed mb-3 italic">
+              Two minutes on your phone and you know if it fits.
+            </div>
+            <div class="flex items-center gap-3 mt-4 pt-3 border-t border-amber-200">
+              <div class="qr-box"></div>
+              <div class="text-xs leading-tight">
+                <div class="font-semibold">Scan for instant match</div>
+                <div class="text-neutral-500">or call +49 89 20 70 42 42</div>
+              </div>
+            </div>
+            <div class="text-[10px] text-neutral-500 mt-3 leading-tight">
+              Data from public sources. Details: lease-a-kitchen.de/privacy
+            </div>
+          </div>
+        </div>
+
+        <!-- Landing page phone -->
+        <div class="flex flex-col items-center">
+          <div class="text-[10px] uppercase tracking-wider text-neutral-500 mb-3 self-start">② The landing page</div>
+          <div class="phone">
+            <div class="phone-screen">
+              <div class="bg-neutral-900 text-white text-[10px] px-3 py-2 flex justify-between items-center">
+                <span class="monospace">●●●</span>
+                <span class="monospace">9:41</span>
+                <span class="monospace">100%</span>
+              </div>
+              <div class="flex-1 p-4 flex flex-col">
+                <div class="text-[10px] text-neutral-400 mb-1">lease-a-kitchen.de</div>
+                <div class="text-lg font-bold leading-tight mb-2">Hi Ms. Klein 👋</div>
+                <div class="text-xs text-neutral-600 leading-relaxed mb-3">
+                  120 units · BSH All-in+ per apartment. Want us to call you back?
+                </div>
+                <div class="bg-neutral-50 rounded-lg p-3 mb-3 border border-neutral-200">
+                  <div class="text-[10px] font-semibold text-neutral-700 mb-1">Senior residence · Munich-Ost</div>
+                  <div class="text-[9px] text-neutral-500">Washer · dryer · fridge · dishwasher per unit</div>
+                </div>
+                <label class="flex items-start gap-2 mb-3 text-[9px] text-neutral-700 leading-tight">
+                  <div class="w-3 h-3 rounded border border-neutral-400 bg-emerald-500 flex-shrink-0 mt-0.5 flex items-center justify-center">
+                    <span class="text-white text-[8px]">✓</span>
+                  </div>
+                  <span>I agree to a call-back. The call may be conducted by an AI assistant.</span>
+                </label>
+                <button class="bg-emerald-500 text-white text-xs font-semibold py-2 rounded-lg">Call me back</button>
+                <div class="text-[8px] text-neutral-400 mt-2 text-center">logged · timestamped · GDPR</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Call / offer -->
+        <div>
+          <div class="text-[10px] uppercase tracking-wider text-neutral-500 mb-3">③ Kate on the call · Otto's offer</div>
+
+          <div class="bg-gradient-to-br from-pink-50 to-rose-100 rounded-xl p-4 mb-4 border border-pink-200">
+            <div class="flex items-center gap-2 mb-2">
+              <div class="w-8 h-8 rounded-full bg-pink-500 flex items-center justify-center text-white font-bold text-xs">K</div>
+              <div>
+                <div class="text-xs font-semibold">Kate</div>
+                <div class="text-[10px] text-neutral-500 flex items-center gap-1">
+                  <span class="wave text-pink-500" style="height:10px"><span></span><span></span><span></span><span></span></span>
+                  on call · 01:23
+                </div>
+              </div>
+            </div>
+            <div class="space-y-1 text-[11px]">
+              <div class="bg-white rounded-lg p-2 text-neutral-700">
+                "Hi, this is Kate — an AI assistant. You're opening 120 units in August, right?"
+              </div>
+              <div class="bg-pink-500 text-white rounded-lg p-2 ml-8">
+                "Yes — do you cover the central kitchen too?"
+              </div>
+              <div class="bg-white rounded-lg p-2 text-neutral-700">
+                "Per-apartment appliances only — the cafeteria kitchen needs commercial-grade, we'd decline that."
+              </div>
+            </div>
+          </div>
+
+          <div class="bg-white border border-neutral-300 rounded-lg p-4 shadow-md">
+            <div class="border-b border-neutral-200 pb-2 mb-3 flex items-center gap-2">
+              <div class="w-6 h-6 rounded-full bg-emerald-500 flex items-center justify-center text-white font-bold text-[10px]">O</div>
+              <div>
+                <div class="text-xs font-semibold">Otto · drafting offer</div>
+                <div class="text-[10px] text-neutral-500">to: klein@diakonie-muc.de</div>
+              </div>
+            </div>
+            <div class="text-xs space-y-1">
+              <div class="font-semibold">BSH All-in+ · 120 units · Munich-Ost</div>
+              <div class="text-neutral-600">Per-apartment washer, dryer, fridge, dishwasher</div>
+              <div class="text-neutral-600">60-month term · incl. maintenance</div>
+              <div class="pt-2 border-t border-neutral-100 mt-2 flex justify-between items-baseline">
+                <span class="text-neutral-500 text-[10px]">per month</span>
+                <span class="text-xl font-bold">€ 14,820</span>
+              </div>
+              <button class="w-full bg-emerald-500 text-white text-xs font-semibold py-2 rounded mt-2">Accept offer</button>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- 5 · Jack Spotlight · Scoring -->
+  <section class="slide bg-neutral-50">
+    <div class="m-auto max-w-6xl px-12 w-full">
+      <div class="text-[11px] uppercase tracking-[0.3em] text-neutral-500 mb-4">The cost gate</div>
+      <h2 class="text-5xl font-bold tracking-tight leading-tight mb-3">Jack protects the budget — and the homologation.</h2>
+      <p class="text-neutral-600 mb-8">A postcard costs ~1,20 €. Jack sends one only if ICP fits (household-pattern deployment, never commercial kitchens) <em>and</em> the deal value justifies the spend.</p>
+
+      <div class="grid grid-cols-2 gap-10 items-start">
+        <div>
+          <div class="text-[11px] uppercase tracking-wider text-neutral-500 mb-3">Six scoring dimensions</div>
+          <div class="space-y-2">
+            <div class="flex items-center justify-between py-2 border-b border-neutral-200"><span class="text-sm">Signal Strength</span>
+              <div class="flex items-center gap-2">
+                <div class="w-32 h-2 bg-neutral-200 rounded"><div class="h-2 bg-amber-500 rounded" style="width:30%"></div></div>
+                <span class="monospace text-sm text-amber-600 font-semibold w-10 text-right">30%</span>
+              </div>
+            </div>
+            <div class="flex items-center justify-between py-2 border-b border-neutral-200"><span class="text-sm">Deal Size</span>
+              <div class="flex items-center gap-2">
+                <div class="w-32 h-2 bg-neutral-200 rounded"><div class="h-2 bg-amber-500 rounded" style="width:25%"></div></div>
+                <span class="monospace text-sm text-amber-600 font-semibold w-10 text-right">25%</span>
+              </div>
+            </div>
+            <div class="flex items-center justify-between py-2 border-b border-neutral-200"><span class="text-sm">Inventory Fit</span>
+              <div class="flex items-center gap-2">
+                <div class="w-32 h-2 bg-neutral-200 rounded"><div class="h-2 bg-amber-500 rounded" style="width:20%"></div></div>
+                <span class="monospace text-sm text-amber-600 font-semibold w-10 text-right">20%</span>
+              </div>
+            </div>
+            <div class="flex items-center justify-between py-2 border-b border-neutral-200"><span class="text-sm">Contact Data Quality</span>
+              <div class="flex items-center gap-2">
+                <div class="w-32 h-2 bg-neutral-200 rounded"><div class="h-2 bg-amber-500 rounded" style="width:15%"></div></div>
+                <span class="monospace text-sm text-amber-600 font-semibold w-10 text-right">15%</span>
+              </div>
+            </div>
+            <div class="flex items-center justify-between py-2 border-b border-neutral-200"><span class="text-sm">Timing / Urgency</span>
+              <div class="flex items-center gap-2">
+                <div class="w-32 h-2 bg-neutral-200 rounded"><div class="h-2 bg-amber-500 rounded" style="width:10%"></div></div>
+                <span class="monospace text-sm text-amber-600 font-semibold w-10 text-right">10%</span>
+              </div>
+            </div>
+            <div class="flex items-center justify-between py-2"><span class="text-sm text-red-600">Risk / Exclusion</span><span class="monospace text-sm text-red-600 font-semibold">KILL</span></div>
+          </div>
+        </div>
+
+        <div class="bg-neutral-900 text-white rounded-xl p-6 monospace text-xs leading-relaxed">
+          <div class="text-neutral-400 mb-3"># jack · top 3 · today</div>
+          <div class="space-y-3">
+            <div>
+              <div class="flex justify-between items-baseline"><span class="text-amber-400">diakonie münchen</span><span class="text-emerald-400 text-sm font-bold">87.3 PREMIUM</span></div>
+              <div class="text-neutral-500 text-[11px] mt-1">KfW funded · 120 units · per-apt deploy · DM named</div>
+              <div class="mt-1 h-1 bg-neutral-800 rounded"><div class="h-1 bg-emerald-500 rounded" style="width:87%"></div></div>
+            </div>
+            <div>
+              <div class="flex justify-between items-baseline"><span class="text-amber-400">stuvent dorm gmbh</span><span class="text-emerald-400 text-sm font-bold">74.1 STANDARD</span></div>
+              <div class="text-neutral-500 text-[11px] mt-1">Berlin · 80-unit student housing · permit granted</div>
+              <div class="mt-1 h-1 bg-neutral-800 rounded"><div class="h-1 bg-emerald-400 rounded" style="width:74%"></div></div>
+            </div>
+            <div>
+              <div class="flex justify-between items-baseline"><span class="text-amber-400">stadthotel group</span><span class="text-blue-400 text-sm font-bold">68.8 STANDARD</span></div>
+              <div class="text-neutral-500 text-[11px] mt-1">Aparthotel rollout · in-room fridges · role only</div>
+              <div class="mt-1 h-1 bg-neutral-800 rounded"><div class="h-1 bg-blue-400 rounded" style="width:68%"></div></div>
+            </div>
+            <div class="pt-2 border-t border-neutral-800 text-neutral-500 text-[11px]">
+              <div>suppressed: 14 (homologation · insolvency · private)</div>
+              <div>watchlist: 28 (re-score in 30d)</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 6 · Live Demo Flow -->
   <section class="slide bg-white">
     <div class="m-auto max-w-6xl px-12 w-full">
       <div class="text-[11px] uppercase tracking-[0.3em] text-neutral-500 mb-4">Live demo</div>
-      <h2 class="text-5xl font-bold tracking-tight leading-tight mb-10">A cockpit, not a chatbot.</h2>
+      <h2 class="text-5xl font-bold tracking-tight leading-tight mb-10">See it work end-to-end.</h2>
 
       <div class="grid grid-cols-2 gap-10 items-center">
         <div class="space-y-5 text-neutral-700">
           <div class="flex gap-4">
             <div class="monospace text-sm text-neutral-400 pt-0.5 w-6">01</div>
-            <div><span class="font-medium text-neutral-900">Scout rejects 3 commercial-kitchen signals.</span><br/><span class="text-sm">ICP is residential appliances only — we don't chase business we can't serve.</span></div>
+            <div><span class="font-medium text-neutral-900">Jack shows 3 scored prospects.</span><br/><span class="text-sm">With source links and per-dimension justification.</span></div>
           </div>
           <div class="flex gap-4">
             <div class="monospace text-sm text-neutral-400 pt-0.5 w-6">02</div>
-            <div><span class="font-medium text-neutral-900">Caller picks up a signal-matched lead.</span><br/><span class="text-sm">Voice call starts. Transcript streams live into the cockpit.</span></div>
+            <div><span class="font-medium text-neutral-900">Postcard on the table — feel free to inspect.</span><br/><span class="text-sm">Real print, real QR. Scan it; the landing page is live on your phone.</span></div>
           </div>
           <div class="flex gap-4">
             <div class="monospace text-sm text-neutral-400 pt-0.5 w-6">03</div>
-            <div><span class="font-medium text-neutral-900">6 envelope fields fill in real time.</span><br/><span class="text-sm">Usage, units, timeline, budget, decision-maker — extracted, not re-typed.</span></div>
+            <div><span class="font-medium text-neutral-900">I call Kate live. Speaker on.</span><br/><span class="text-sm">AI disclosure in second one. 60-second qualification.</span></div>
           </div>
           <div class="flex gap-4">
             <div class="monospace text-sm text-neutral-400 pt-0.5 w-6">04</div>
-            <div><span class="font-medium text-neutral-900">One lead escalates — human takes over.</span><br/><span class="text-sm">Budget unclear. Agent hands off with full context.</span></div>
+            <div><span class="font-medium text-neutral-900">Otto drafts the offer in real time.</span><br/><span class="text-sm">PDF renders on the second screen while Kate is still talking.</span></div>
           </div>
           <div class="flex gap-4">
             <div class="monospace text-sm text-neutral-400 pt-0.5 w-6">05</div>
-            <div><span class="font-medium text-neutral-900">Closer sends the offer. Done.</span><br/><span class="text-sm">Only with opt-in. Everything logged, auditable, reversible.</span></div>
+            <div><span class="font-medium text-neutral-900">Offer hits the inbox. Done.</span><br/><span class="text-sm">Every step logged. Every consent timestamped. Auditable.</span></div>
           </div>
         </div>
 
         <div class="bg-neutral-900 text-white rounded-xl p-6 monospace text-xs leading-relaxed">
-          <div class="text-neutral-400 mb-2"># live cockpit · today</div>
-          <div><span class="text-emerald-400">scout</span>     signals_scanned     1,248</div>
-          <div><span class="text-red-400">guardrail</span> icp_reject           3    <span class="text-neutral-500">(commercial kitchens)</span></div>
-          <div><span class="text-emerald-400">scout</span>     leads_created        7</div>
-          <div><span class="text-amber-400">caller</span>    calls_made           4</div>
-          <div><span class="text-amber-400">caller</span>    opt_ins              3</div>
-          <div><span class="text-emerald-400">closer</span>    envelopes_sent       2</div>
-          <div><span class="text-neutral-500">human</span>     escalations          1    <span class="text-neutral-500">(budget unclear)</span></div>
+          <div class="text-neutral-400 mb-2"># live cockpit</div>
+          <div><span class="text-amber-400">jack</span>     prospects_scored     247</div>
+          <div><span class="text-amber-400">jack</span>     homolog_excluded     31</div>
+          <div><span class="text-amber-400">jack</span>     premium_triggered    12</div>
+          <div><span class="text-pink-400">kate</span>     postcards_shipped    47</div>
+          <div><span class="text-pink-400">kate</span>     inbound_calls        8</div>
+          <div><span class="text-pink-400">kate</span>     qualified            6</div>
+          <div><span class="text-emerald-400">otto</span>     offers_sent          6</div>
+          <div class="text-neutral-500 pt-3 border-t border-neutral-800 mt-3">0 cold calls · 0 cold emails · 0 homologation risk</div>
         </div>
       </div>
     </div>
   </section>
 
-  <!-- 5 · Why it works -->
+  <!-- 7 · Unit economics + moat -->
   <section class="slide bg-neutral-50">
-    <div class="m-auto max-w-5xl px-12 w-full">
-      <div class="text-[11px] uppercase tracking-[0.3em] text-neutral-500 mb-4">Why this works</div>
-      <h2 class="text-5xl font-bold tracking-tight leading-tight mb-12">Built on HappyRobot + guardrails.</h2>
+    <div class="m-auto max-w-6xl px-12 w-full">
+      <div class="text-[11px] uppercase tracking-[0.3em] text-neutral-500 mb-4">Why this scales</div>
+      <h2 class="text-5xl font-bold tracking-tight leading-tight mb-10">Unit economics that close the loop.</h2>
 
-      <div class="grid grid-cols-2 gap-8">
-        <div class="bg-white rounded-xl p-6 border border-neutral-200">
-          <div class="text-[11px] uppercase tracking-wider text-neutral-500 mb-2">HappyRobot delivers</div>
-          <ul class="space-y-2 text-sm text-neutral-700">
-            <li>✓ Native voice, SMS, WhatsApp, email</li>
-            <li>✓ Workflow engine with AI Extract, AI Classify</li>
-            <li>✓ Contacts + memory across channels</li>
-            <li>✓ Full transcripts + recordings + audit trail</li>
-          </ul>
+      <div class="grid grid-cols-5 gap-4 mb-10">
+        <div class="bg-white rounded-xl p-5 border border-neutral-200">
+          <div class="text-[10px] uppercase tracking-wider text-neutral-500 mb-2">Postcard cost</div>
+          <div class="text-3xl font-bold">1,20 €</div>
         </div>
-        <div class="bg-white rounded-xl p-6 border border-neutral-200">
-          <div class="text-[11px] uppercase tracking-wider text-neutral-500 mb-2">Our cockpit adds</div>
-          <ul class="space-y-2 text-sm text-neutral-700">
-            <li>✓ ICP filter — residential only, no commercial kitchens</li>
-            <li>✓ Signal requirement — no call without documented intent</li>
-            <li>✓ Escalation gates — deal size, unclear consent, edge cases</li>
-            <li>✓ DNC list — enforced, not optional</li>
-          </ul>
+        <div class="bg-white rounded-xl p-5 border border-neutral-200">
+          <div class="text-[10px] uppercase tracking-wider text-neutral-500 mb-2">QR scan rate</div>
+          <div class="text-3xl font-bold">6 %</div>
+        </div>
+        <div class="bg-white rounded-xl p-5 border border-neutral-200">
+          <div class="text-[10px] uppercase tracking-wider text-neutral-500 mb-2">Call → offer</div>
+          <div class="text-3xl font-bold">40 %</div>
+        </div>
+        <div class="bg-white rounded-xl p-5 border border-neutral-200">
+          <div class="text-[10px] uppercase tracking-wider text-neutral-500 mb-2">Offer → close</div>
+          <div class="text-3xl font-bold">25 %</div>
+        </div>
+        <div class="bg-white rounded-xl p-5 border border-neutral-200">
+          <div class="text-[10px] uppercase tracking-wider text-neutral-500 mb-2">Ø deal size</div>
+          <div class="text-3xl font-bold">3 800 €</div>
         </div>
       </div>
 
-      <div class="mt-10 grid grid-cols-3 gap-6 text-center">
-        <div>
-          <div class="text-3xl font-bold text-neutral-900">Autonomy</div>
-          <div class="text-sm text-neutral-500 mt-1">3 agents run 24/7 on heartbeats</div>
+      <div class="grid grid-cols-3 gap-6">
+        <div class="bg-emerald-50 rounded-xl p-6 border border-emerald-200">
+          <div class="text-[10px] uppercase tracking-wider text-emerald-700 mb-2">CAC</div>
+          <div class="text-4xl font-bold text-emerald-700">80 €</div>
         </div>
-        <div>
-          <div class="text-3xl font-bold text-neutral-900">Dashboard</div>
-          <div class="text-sm text-neutral-500 mt-1">Live transcripts · pipeline · audit</div>
+        <div class="bg-emerald-50 rounded-xl p-6 border border-emerald-200">
+          <div class="text-[10px] uppercase tracking-wider text-emerald-700 mb-2">LTV (1 year)</div>
+          <div class="text-4xl font-bold text-emerald-700">3 800 €</div>
         </div>
-        <div>
-          <div class="text-3xl font-bold text-neutral-900">Outcome</div>
-          <div class="text-sm text-neutral-500 mt-1">BSH-ready envelope, not just a meeting</div>
+        <div class="bg-emerald-50 rounded-xl p-6 border border-emerald-200">
+          <div class="text-[10px] uppercase tracking-wider text-emerald-700 mb-2">Payback</div>
+          <div class="text-4xl font-bold text-emerald-700">&lt; 1 month</div>
         </div>
       </div>
-    </div>
-  </section>
 
-  <!-- 6 · Market & proof -->
-  <section class="slide bg-white">
-    <div class="m-auto max-w-5xl px-12 w-full">
-      <div class="text-[11px] uppercase tracking-[0.3em] text-neutral-500 mb-4">Reality check</div>
-      <h2 class="text-5xl font-bold tracking-tight leading-tight mb-10">Not a demo. A working business.</h2>
-
-      <div class="grid grid-cols-2 gap-10">
-        <div>
-          <div class="text-neutral-500 text-sm mb-4">The case we demo on:</div>
-          <div class="space-y-4">
-            <div class="flex items-start gap-4">
-              <div class="w-1 h-1 rounded-full bg-neutral-900 mt-3"></div>
-              <div>
-                <div class="font-semibold">Official BSH commercial-agent contract</div>
-                <div class="text-sm text-neutral-600">Since 01.03.2026 · 7% commission · no territorial limits</div>
-              </div>
-            </div>
-            <div class="flex items-start gap-4">
-              <div class="w-1 h-1 rounded-full bg-neutral-900 mt-3"></div>
-              <div>
-                <div class="font-semibold">12,000+ senior-living operators in Germany</div>
-                <div class="text-sm text-neutral-600">Diakonie, Caritas, AWO, private — real TAM</div>
-              </div>
-            </div>
-            <div class="flex items-start gap-4">
-              <div class="w-1 h-1 rounded-full bg-neutral-900 mt-3"></div>
-              <div>
-                <div class="font-semibold">Clear outcome</div>
-                <div class="text-sm text-neutral-600">Structured email to BSH with 6 mandatory fields → order</div>
-              </div>
-            </div>
-          </div>
-        </div>
-        <div class="bg-neutral-900 text-white rounded-xl p-6 flex flex-col justify-center">
-          <div class="text-[11px] uppercase tracking-[0.3em] text-neutral-400 mb-4">Beyond the demo</div>
-          <div class="text-lg leading-relaxed">
-            Germany has
-            <span class="font-bold text-white">700,000 commercial agents</span>
-            working alone. They don't need better CRMs — they need a team of AI colleagues that respects their customers.
-          </div>
-          <div class="mt-6 text-sm text-neutral-400">
-            Same three agents. Different product briefing. Same precision.
-          </div>
+      <div class="mt-10 bg-neutral-900 text-white rounded-xl p-6 flex items-center gap-6">
+        <div class="text-[10px] uppercase tracking-[0.2em] text-neutral-400 shrink-0">Moat</div>
+        <div class="text-lg leading-relaxed flex-1">
+          While competitors get abmahnt, our stack is <span class="font-semibold">§7-compliant by design</span>.
+          Every touchpoint rests on documented consent or a §7-free channel — auditable, defensible, exportable to any B2B sector.
         </div>
       </div>
     </div>
   </section>
 
-  <!-- 7 · Ask -->
+  <!-- 8 · Ask -->
   <section class="slide bg-gradient-to-br from-neutral-900 to-neutral-800 text-white">
     <div class="m-auto max-w-3xl px-12 text-center">
       <div class="text-[11px] uppercase tracking-[0.3em] text-neutral-400 mb-6">Thank you</div>
-      <h2 class="text-6xl font-bold tracking-tight leading-none mb-10">One call away.</h2>
+      <h2 class="text-6xl font-bold tracking-tight leading-none mb-10">One QR away.</h2>
       <p class="text-xl text-neutral-300 leading-relaxed mb-12">
-        We built the sales team that never spams —<br/>because every call traces back to a real signal.
+        We built the sales team that never cold-calls —<br/>because the prospect always opens the door first.
       </p>
       <div class="flex items-center justify-center gap-6 text-sm">
         <a class="px-5 py-2.5 bg-white text-neutral-900 rounded-full font-medium">Let's talk</a>
       </div>
       <div class="mt-20 text-xs text-neutral-500 monospace">
-        Team undeterministic tornado · Built in 48h on HappyRobot · TUM.ai Makeathon · April 2026
+        Team undeterministic tornado · Built in 12h on HappyRobot · TUM.ai Makeathon · April 2026
       </div>
     </div>
   </section>
@@ -272,9 +564,9 @@
 </div>
 
 <!-- Navigation -->
-<div class="fixed bottom-6 left-1/2 -translate-x-1/2 flex items-center gap-4 bg-white/90 backdrop-blur px-4 py-2 rounded-full border border-neutral-200 shadow-sm">
+<div class="fixed bottom-6 left-1/2 -translate-x-1/2 flex items-center gap-4 bg-white/90 backdrop-blur px-4 py-2 rounded-full border border-neutral-200 shadow-sm z-50">
   <button id="prev" class="text-sm text-neutral-600 hover:text-neutral-900">‹</button>
-  <span id="counter" class="monospace text-xs text-neutral-500">1 / 7</span>
+  <span id="counter" class="monospace text-xs text-neutral-500">1 / 8</span>
   <button id="next" class="text-sm text-neutral-600 hover:text-neutral-900">›</button>
   <span class="text-[10px] text-neutral-400 ml-2">Use <span class="kbd">←</span> <span class="kbd">→</span></span>
 </div>

@@ -1,0 +1,443 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Proposal · {{company}} · lease·a·kitchen</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  /* lease·a·kitchen offer template
+     Source of truth: CI/styleguide.html · Hackathon-only.
+     Placeholders: {{...}} replaced by Otto at render time. */
+
+  :root {
+    --teal-600: #0D9488;
+    --teal-700: #0F766E;
+    --teal-800: #115E59;
+    --teal-50:  #F0FDFA;
+    --tint-50w: #87BAB6;
+    --tint-30w: #B6D7D5;
+    --slate-400: #94A3B8;
+    --slate-500: #64748B;
+    --slate-700: #334155;
+    --slate-900: #0F172A;
+    --ink: #0F172A;
+    --paper: #FFFFFF;
+    --line: #E2E8F0;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { background: #f1f5f9; }
+  body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    color: var(--ink);
+    font-size: 14px;
+    line-height: 1.5;
+    padding: 32px 16px;
+  }
+
+  .page {
+    max-width: 760px;
+    margin: 0 auto;
+    background: var(--paper);
+    box-shadow: 0 8px 30px rgba(15, 23, 42, 0.08);
+    padding: 56px 64px;
+    border-radius: 4px;
+  }
+
+  /* Header */
+  .header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    padding-bottom: 28px;
+    border-bottom: 2px solid var(--teal-600);
+    margin-bottom: 36px;
+  }
+  .logo svg { display: block; height: 56px; width: auto; }
+  .meta {
+    text-align: right;
+    font-size: 12px;
+    color: var(--slate-500);
+    line-height: 1.7;
+  }
+  .meta .label { color: var(--slate-400); font-weight: 500; }
+  .meta .value { color: var(--slate-700); }
+  .meta .offer-id {
+    display: inline-block;
+    margin-top: 6px;
+    padding: 3px 8px;
+    background: var(--teal-50);
+    color: var(--teal-800);
+    border-radius: 3px;
+    font-weight: 600;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 11px;
+  }
+
+  /* Recipient block */
+  .recipient {
+    margin-bottom: 32px;
+    font-size: 13px;
+    color: var(--slate-700);
+    line-height: 1.6;
+  }
+  .recipient .name { font-weight: 600; color: var(--ink); }
+
+  h1 {
+    font-size: 28px;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    color: var(--ink);
+    margin-bottom: 8px;
+  }
+  h1 .accent { color: var(--teal-700); }
+  .subtitle {
+    color: var(--slate-500);
+    font-size: 14px;
+    margin-bottom: 28px;
+  }
+
+  .greeting { margin-bottom: 16px; }
+  .intro    { margin-bottom: 28px; color: var(--slate-700); }
+
+  /* Setup summary */
+  .setup {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+    background: var(--teal-50);
+    border-radius: 8px;
+    padding: 18px 20px;
+    margin-bottom: 32px;
+  }
+  .setup .item .label {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--teal-700);
+    font-weight: 600;
+    margin-bottom: 4px;
+  }
+  .setup .item .value {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--ink);
+  }
+
+  /* Line items */
+  .section-title {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--slate-500);
+    font-weight: 600;
+    margin-bottom: 12px;
+  }
+  table.lines {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 28px;
+    font-size: 13px;
+  }
+  table.lines thead th {
+    text-align: left;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--slate-400);
+    font-weight: 600;
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--line);
+  }
+  table.lines thead th.num { text-align: right; }
+  table.lines tbody td {
+    padding: 14px 12px;
+    border-bottom: 1px solid var(--line);
+    vertical-align: top;
+  }
+  table.lines tbody td.num {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+  }
+  table.lines .product-name {
+    font-weight: 600;
+    color: var(--ink);
+  }
+  table.lines .product-cat {
+    font-size: 11px;
+    color: var(--slate-400);
+    font-weight: 500;
+    margin-top: 2px;
+  }
+  table.lines .sku {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 11px;
+    color: var(--slate-500);
+  }
+
+  /* Totals */
+  .totals {
+    background: var(--ink);
+    color: white;
+    border-radius: 8px;
+    padding: 24px 28px;
+    margin-bottom: 32px;
+  }
+  .totals .row {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    padding: 6px 0;
+    font-size: 13px;
+    color: rgba(255,255,255,0.75);
+  }
+  .totals .row.divider {
+    border-top: 1px solid rgba(255,255,255,0.18);
+    margin-top: 8px;
+    padding-top: 14px;
+  }
+  .totals .row .label { font-weight: 500; }
+  .totals .row .value { font-variant-numeric: tabular-nums; font-weight: 600; }
+  .totals .row.discount .value { color: #6EE7B7; }
+  .totals .row.headline {
+    font-size: 28px;
+    font-weight: 700;
+    color: white;
+    padding: 12px 0 4px;
+  }
+  .totals .row.headline .label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.1em; color: rgba(255,255,255,0.55); font-weight: 600; align-self: end; padding-bottom: 8px; }
+  .totals .footnote { font-size: 11px; color: rgba(255,255,255,0.55); margin-top: 10px; }
+
+  /* Notes */
+  .notes {
+    font-size: 12px;
+    color: var(--slate-500);
+    line-height: 1.7;
+    padding: 16px 0;
+    border-top: 1px solid var(--line);
+    border-bottom: 1px solid var(--line);
+    margin-bottom: 24px;
+  }
+  .notes strong { color: var(--slate-700); }
+  .notes ul { padding-left: 18px; margin-top: 6px; }
+
+  /* CTA */
+  .cta {
+    text-align: center;
+    margin: 32px 0 24px;
+  }
+  .cta .buttons {
+    display: inline-flex;
+    gap: 10px;
+    align-items: center;
+  }
+  .cta a {
+    display: inline-block;
+    padding: 12px 28px;
+    text-decoration: none;
+    font-weight: 600;
+    border-radius: 6px;
+    font-size: 14px;
+    letter-spacing: 0.01em;
+    transition: background 0.15s, border-color 0.15s;
+  }
+  .cta a.primary {
+    background: var(--teal-700);
+    color: white;
+  }
+  .cta a.primary:hover { background: var(--teal-800); }
+  .cta a.secondary {
+    background: white;
+    color: var(--teal-700);
+    border: 1.5px solid var(--teal-700);
+    padding: 10.5px 24px;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .cta a.secondary:hover { background: var(--teal-50); }
+  .cta a.secondary svg { width: 14px; height: 14px; }
+  .cta .hint {
+    margin-top: 12px;
+    font-size: 12px;
+    color: var(--slate-400);
+  }
+
+  /* Footer */
+  .footer {
+    border-top: 1px solid var(--line);
+    padding-top: 18px;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    font-size: 11px;
+    color: var(--slate-400);
+    line-height: 1.6;
+  }
+  .footer .col strong { color: var(--slate-700); display: block; margin-bottom: 4px; font-weight: 600; }
+
+  @media print {
+    body { background: white; padding: 0; }
+    .page { box-shadow: none; padding: 32mm 24mm; }
+  }
+</style>
+</head>
+<body>
+
+<div class="page">
+
+  <!-- Header -->
+  <header class="header">
+    <div class="logo">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 80" shape-rendering="geometricPrecision">
+        <g transform="translate(8 16) scale(2)">
+          <rect x="3"  y="3"  width="7" height="7" rx="1.5" fill="#0F766E"/>
+          <rect x="14" y="3"  width="7" height="7" rx="1.5" fill="#87BAB6"/>
+          <rect x="3"  y="14" width="7" height="7" rx="1.5" fill="#87BAB6"/>
+          <rect x="14" y="14" width="7" height="7" rx="1.5" fill="#B6D7D5"/>
+        </g>
+        <text x="72" y="52" font-family="Inter, sans-serif" font-size="32" letter-spacing="-0.64" fill="#0F172A">
+          <tspan font-weight="400" fill="#94A3B8">lease·a·</tspan><tspan font-weight="700" fill="#115E59">kitchen</tspan>
+        </text>
+      </svg>
+    </div>
+    <div class="meta">
+      <div><span class="label">Issued</span> &nbsp; <span class="value">{{issued_date}}</span></div>
+      <div><span class="label">Valid until</span> &nbsp; <span class="value">{{valid_until}}</span></div>
+      <div class="offer-id">{{offer_id}}</div>
+    </div>
+  </header>
+
+  <!-- Recipient -->
+  <div class="recipient">
+    <div class="name">{{contact_name}}</div>
+    <div>{{company}}</div>
+    <div>{{recipient_address_line}}</div>
+  </div>
+
+  <!-- Title -->
+  <h1>Your appliance lease <span class="accent">proposal</span>.</h1>
+  <div class="subtitle">A tailored setup for {{delivery_location}} — ready when you are.</div>
+
+  <p class="greeting">Dear {{contact_name}},</p>
+  <p class="intro">
+    Thank you for getting in touch. Based on what you shared with Kate, we have put together
+    the following lease setup. Everything is ready to install from your planned start date,
+    and the price is locked for the full term.
+  </p>
+
+  <!-- Setup summary -->
+  <div class="setup">
+    <div class="item">
+      <div class="label">Location</div>
+      <div class="value">{{delivery_location}}</div>
+    </div>
+    <div class="item">
+      <div class="label">Start date</div>
+      <div class="value">{{delivery_date}}</div>
+    </div>
+    <div class="item">
+      <div class="label">Term</div>
+      <div class="value">{{term_months}} months</div>
+    </div>
+  </div>
+
+  <!-- Line items -->
+  <div class="section-title">Included appliances</div>
+  <table class="lines">
+    <thead>
+      <tr>
+        <th>Product</th>
+        <th class="num">Qty</th>
+        <th class="num">€ / unit · month</th>
+        <th class="num">€ / month</th>
+      </tr>
+    </thead>
+    <tbody>
+      <!-- {{#line_items}} -->
+      <tr>
+        <td>
+          <div class="product-name">{{product}}</div>
+          <div class="product-cat">{{category}} · <span class="sku">{{sku}}</span></div>
+        </td>
+        <td class="num">{{qty}}</td>
+        <td class="num">{{unit_price_eur}} €</td>
+        <td class="num">{{line_total_eur_month}} €</td>
+      </tr>
+      <!-- {{/line_items}} -->
+    </tbody>
+  </table>
+
+  <!-- Totals -->
+  <div class="totals">
+    <div class="row">
+      <span class="label">Subtotal</span>
+      <span class="value">{{subtotal_eur_month}} € / month</span>
+    </div>
+    <!-- {{#has_discount}} -->
+    <div class="row discount">
+      <span class="label">Quantity discount ({{quantity_tier_discount_pct}} %)</span>
+      <span class="value">– {{discount_eur_month}} € / month</span>
+    </div>
+    <!-- {{/has_discount}} -->
+    <div class="row divider headline">
+      <span class="label">Monthly rate</span>
+      <span class="value">{{total_eur_month}} €</span>
+    </div>
+    <div class="footnote">
+      Total contract value over {{term_months}} months: <strong style="color:white">{{total_contract_value_eur}} €</strong>
+      &nbsp;·&nbsp; All prices excl. VAT.
+    </div>
+  </div>
+
+  <!-- {{#has_unmatched}} -->
+  <div class="notes">
+    <strong>Items still to discuss</strong>
+    <ul>
+      <!-- {{#unmatched}} -->
+      <li>{{description}} ({{qty}} ×) — no matching unit yet, happy to talk options.</li>
+      <!-- {{/unmatched}} -->
+    </ul>
+  </div>
+  <!-- {{/has_unmatched}} -->
+
+  <div class="notes">
+    <strong>The fine print.</strong> Subject to stock availability. Installation, pickup of
+    old appliances, and maintenance are available as optional add-ons. This proposal is
+    valid until {{valid_until}}.
+  </div>
+
+  <!-- CTA -->
+  <div class="cta">
+    <div class="buttons">
+      <a class="primary" href="{{accept_url}}">Accept this proposal</a>
+      <a class="secondary" href="tel:+498920704242">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.37 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.91.33 1.85.57 2.81.7A2 2 0 0 1 22 16.92z"/>
+        </svg>
+        Call us back
+      </a>
+    </div>
+    <div class="hint">Questions? +49 89 20 70 42 42</div>
+  </div>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <div class="col">
+      <strong>lease·a·kitchen</strong>
+      operated by orgaloom GmbH<br/>
+      Munich, Germany
+    </div>
+    <div class="col" style="text-align:right">
+      <strong>Get in touch</strong>
+      hello@lease-a-kitchen.de<br/>
+      lease-a-kitchen.de
+    </div>
+  </footer>
+
+</div>
+
+</body>
+</html>
