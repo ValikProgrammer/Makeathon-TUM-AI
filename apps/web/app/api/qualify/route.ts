@@ -37,20 +37,25 @@ export async function POST(req: NextRequest) {
 
   // Trigger HappyRobot Caller workflow
   if (HAPPYROBOT_CALLER_WEBHOOK) {
-    const payload = {
+    // HappyRobot voice trigger accepts phone_number as primary field.
+    // Additional context is passed so the voice agent prompt can reference it via variables.
+    const payload: Record<string, unknown> = {
+      phone_number: lead.contact?.phone ?? "",
+      // Extra fields — available as {{variable}} in the HR prompt if the workflow is configured for them
       lead_id: lead.id,
-      signal_ids: lead.signal?.signal_id ? [lead.signal.signal_id] : [],
+      org: lead.org,
+      city: lead.city,
       signal_summary: lead.signal?.title ?? "",
-      entity: { name: lead.org, address: lead.city },
-      contact: lead.contact ?? {},
-      preferred_language: "de",
+      signal_source: lead.signal?.source ?? "",
+      contact_name: lead.contact?.name ?? "",
+      contact_role: lead.contact?.role ?? "",
     };
 
     const hrResponse = await fetch(HAPPYROBOT_CALLER_WEBHOOK, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${HAPPYROBOT_API_KEY}`,
+        ...(HAPPYROBOT_API_KEY ? { Authorization: `Bearer ${HAPPYROBOT_API_KEY}` } : {}),
       },
       body: JSON.stringify(payload),
     });
