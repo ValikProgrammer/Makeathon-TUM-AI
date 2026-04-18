@@ -63,9 +63,9 @@ If lead data is incomplete (missing email, missing devices), return a structured
   "email": "klein@diakonie-muc.de",
   "use_case": "new senior residence opening Munich-Ost",
   "bundle_mix": {
-    "standard": 0,
-    "premium": 120,
-    "shared":  1
+    "leader":      0,
+    "profi":       115,
+    "top_feature": 5
   },
   "preferred_term_months": 60,
   "delivery_location": "Munich-Ost",

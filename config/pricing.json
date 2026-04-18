@@ -1,36 +1,66 @@
 {
-  "version": "1.0",
-  "description": "BSH appliance pricing for lease·a·kitchen. Otto must not invent prices outside these ranges.",
+  "version": "2.0",
+  "description": "BSH All-in+ Kitchen Package pricing. Three tiers — Good / Better / Best — matching BSH's own product catalogue (Paket Leader / Profi / Top Feature). Otto must not quote prices outside these ranges.",
+  "source": "All-in+ Business Solutions Produktsortiment (BSH internal deck, April 2026)",
 
-  "monthly_rate_per_unit_eur": 42,
   "default_term_months": 60,
   "commission_pct": 7,
 
   "bundles": [
     {
-      "id": "standard",
-      "label": "Standard Residential Unit",
-      "label_de": "Standard Wohneinheit",
-      "appliances": ["Bosch Serie 4 Fridge-Freezer", "Bosch Serie 2 Oven", "Bosch Serie 2 Hob", "Siemens Dishwasher"],
+      "id": "leader",
+      "tier": "good",
+      "label": "Leader Package",
+      "label_de": "Paket Leader",
+      "positioning": "Fully equipped kitchen at an attractive price — Bosch Serie 2 – 4 appliances.",
+      "appliances": [
+        "Bosch Serie 4 Built-in Oven (60×60 cm, black)",
+        "Bosch Serie 4 Electric Cooktop (60 cm, framed)",
+        "Bosch Serie 2 Glass Wall Hood (60 cm)",
+        "Bosch Serie 2 Freestanding Fridge-Freezer (176×60 cm)",
+        "Bosch Serie 4 Freestanding Dishwasher (60 cm, white)"
+      ],
       "monthly_eur": 42,
       "purchase_equiv_eur": 3200
     },
     {
-      "id": "premium",
-      "label": "Premium Residential Unit",
-      "label_de": "Premium Wohneinheit",
-      "appliances": ["Bosch Serie 6 Fridge-Freezer", "Bosch Serie 6 Oven", "Bosch Serie 4 Induction Hob", "Siemens iQ500 Dishwasher", "Bosch Washing Machine"],
+      "id": "profi",
+      "tier": "better",
+      "label": "Profi Package",
+      "label_de": "Paket Profi",
+      "positioning": "Elevated standard for higher expectations — Bosch Serie 4 – 6 appliances.",
+      "appliances": [
+        "Bosch Serie 6 Built-in Oven (60×60 cm, black)",
+        "Bosch Serie 6 Induction Cooktop (60 cm, framed)",
+        "Bosch Serie 4 Wall Hood (60 cm, clear glass)",
+        "Bosch Serie 4 Freestanding Fridge-Freezer (203×60 cm, metal look)",
+        "Bosch Serie 4 Freestanding Dishwasher (60 cm, brushed steel)"
+      ],
       "monthly_eur": 58,
       "purchase_equiv_eur": 4600
     },
     {
-      "id": "shared_kitchen",
-      "label": "Shared Kitchen (6–12 residents)",
-      "label_de": "Gemeinschaftsküche (6–12 Bewohner)",
-      "appliances": ["Bosch Serie 6 Fridge-Freezer xl2", "Bosch Commercial-grade Oven x2", "Bosch Induction Hob x2", "Siemens iQ700 Dishwasher"],
-      "monthly_eur": 95,
-      "purchase_equiv_eur": 7800
+      "id": "top_feature",
+      "tier": "best",
+      "label": "Top Feature Package",
+      "label_de": "Paket Top Feature",
+      "positioning": "Highest standard — Bosch Serie 6 – 8 appliances, best energy efficiency, premium features.",
+      "appliances": [
+        "Bosch Serie 8 Built-in Oven with microwave function (60×60 cm)",
+        "Bosch Serie 8 Induction Cooktop (80 cm, framed, FlexInduction)",
+        "Bosch Serie 8 Glass Wall Hood (80 cm, Europe's quietest)",
+        "Bosch Serie 6 Freestanding Fridge-Freezer (203×60 cm, brushed steel)",
+        "Bosch Serie 8 Fully Integrated Dishwasher (60 cm, XXL)"
+      ],
+      "monthly_eur": 80,
+      "purchase_equiv_eur": 6500
     }
+  ],
+
+  "always_included": [
+    "Warranty for the full contract duration (Bosch Customer Service)",
+    "Delivery",
+    "Pickup at end of term"
   ],
 
   "escalation_threshold_total_eur": 100000,
