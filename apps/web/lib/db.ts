@@ -294,11 +294,62 @@ function buildSeedLeads(): Lead[] {
       motivation_string: "simplify", score: 87,
     },
   ];
-  return seeds.map((s, i) => ({
+  const leads = seeds.map<Lead>((s, i) => ({
     id: `L-${1000 + i + 1}`,
     created_at: now,
     updated_at: now,
     stage: "new" as Stage,
     ...s,
   }));
+
+  // Demo boost — one lead already qualified + one already offered so the
+  // cockpit looks alive before any call has run. Both are flagged with
+  // consent so the pipeline KPIs render sensibly.
+
+  // DOMIZILIUM GmbH (index 3) — fully qualified, awaiting Otto
+  leads[3] = {
+    ...leads[3],
+    stage: "qualified",
+    person_phone: "+49 8861 234 56 70",
+    consent_given_at: now,
+    consent_text_version: "v1.0",
+    consent_ip: "demo-seed",
+    facility_type: "assisted_living",
+    num_units: 60,
+    timeline: "Q3 2026",
+    preferred_term_months: 60,
+    decision_maker: "Julia Schwarz, Einrichtungsleitung",
+    bundle_leader: 20,
+    bundle_profi: 40,
+    bundle_top_feature: 0,
+    opt_in: true,
+    preferred_channel: "email",
+    contact_address: "j.schwarz@domizilium.de",
+    call_notes: "Wants Serie 6 for premium wing, Leader for staff apartments. Decision Q2.",
+  };
+
+  // Augustinum Gruppe (index 9) — offer already sent
+  leads[9] = {
+    ...leads[9],
+    stage: "offered",
+    person_phone: "+49 89 723 48 42",
+    consent_given_at: now,
+    consent_text_version: "v1.0",
+    consent_ip: "demo-seed",
+    facility_type: "senior_care",
+    num_units: 180,
+    timeline: "2026-2027 rollout",
+    preferred_term_months: 72,
+    decision_maker: "Sabine Fischer, Hausleitung",
+    bundle_leader: 0,
+    bundle_profi: 140,
+    bundle_top_feature: 40,
+    opt_in: true,
+    preferred_channel: "email",
+    contact_address: "s.fischer@augustinum.de",
+    call_notes: "Jubilee refurb — quiet premium washers important, Serie 8 for common areas.",
+    offer_sent_at: now,
+  };
+
+  return leads;
 }
