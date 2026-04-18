@@ -182,7 +182,7 @@ Jack queries this before scoring. Kate queries before dialing. Otto queries befo
 
 ### `inventory` — what Otto is allowed to offer
 
-Mirror of `otto_mock_pricelist.json` in Postgres. Keeps the agent dynamic and auditable.
+Post-hackathon: full SKU-level mirror in Postgres (source JSON parked in Google Drive). Hackathon: simplified bundles in `config/pricing.json`.
 
 | Field | Purpose |
 |---|---|

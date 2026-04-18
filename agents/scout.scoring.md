@@ -95,7 +95,7 @@ Expected total contract value over the lease term. Drives whether a prospect des
 | 30–49 | Small operator: <30 units, single-category need | 5.000 – 25.000 € |
 | 0–29 | Minimal scope, one-off replacements | < 5.000 € |
 
-**Inputs:** Number of units / rooms / apartments · operator size (employee count, site count) · known refresh cycle · match to All-in+ pricing (see `otto_mock_pricelist.json`).
+**Inputs:** Number of units / rooms / apartments · operator size (employee count, site count) · known refresh cycle · match to All-in+ pricing (hackathon uses simplified bundles in `config/pricing.json`; full SKU-level catalog parked in Google Drive).
 
 ---
 

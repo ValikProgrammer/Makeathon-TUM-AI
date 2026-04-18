@@ -326,7 +326,7 @@ Otto does **not** touch email / SMS / WhatsApp send nodes. Those are Kate's.
 
 # Hackathon minimal build (~2 h)
 
-1. Load `seed/pricelist.json` once at boot.
+1. Load the price list once at boot (deferred — see `config/pricing.json` for hackathon bundles; full per-SKU list lives in Google Drive as `otto_mock_pricelist.json`).
 2. Two Python functions: `lookup_products`, `calculate_offer` — exactly as above.
 3. One LLM call (Claude) with the system prompt + envelope + function-call tool schema.
 4. Render email body from template.
@@ -337,7 +337,7 @@ Otto does **not** touch email / SMS / WhatsApp send nodes. Those are Kate's.
 ## Open items / TBD
 
 - [x] Offer template (EN) — email long form, merge fields.
-- [x] Price / product-bundle matrix — `seed/pricelist.json`.
+- [ ] Price / product-bundle matrix — hackathon uses simplified `config/pricing.json` bundles; full per-SKU list (`otto_mock_pricelist.json`) parked in Google Drive until post-hackathon.
 - [x] TCO calculation approach.
 - [ ] Exact six BSH-submission fields (Annex 2).
 - [ ] BSH target mail format — free text / key-value / structured header?
