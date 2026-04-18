@@ -195,37 +195,54 @@ The node output is available as `@read.rows[0]` — reference columns with dot n
 
 ### 2.3 Custom Code — compute totals
 
-Node: **Custom Code** (JavaScript).
+Node: **Custom Code** (Python only — JS is not supported).
 
-```js
-const lead = input.rows[0];
-const rates = { leader: 42, profi: 58, top_feature: 80 };
-const purchase = { leader: 3200, profi: 4600, top_feature: 6500 };
-const leader = lead.bundle_leader ?? 0;
-const profi = lead.bundle_profi ?? 0;
-const tf = lead.bundle_top_feature ?? 0;
-const units = leader + profi + tf;
-const term = lead.preferred_term_months ?? 60;
+In the **Input data** panel, add one key:
+- Key: `lead`
+- Value: `@read.rows[0]` (the single row from the Read-from-Twin node)
 
-const monthly = leader * rates.leader + profi * rates.profi + tf * rates.top_feature;
-const total = monthly * term;
-const purchase_equiv = leader * purchase.leader + profi * purchase.profi + tf * purchase.top_feature;
-const savings = Math.max(0, purchase_equiv - total);
+Paste this into the code editor:
 
-return {
-  company_name: lead.company_name,
-  contact_name: lead.person_name,
-  contact_email: lead.contact_address || lead.person_email,
-  city: lead.city,
-  bundles: [
-    { label: "Leader",      qty: leader, monthly: rates.leader,      total_month: leader * rates.leader },
-    { label: "Profi",       qty: profi,  monthly: rates.profi,       total_month: profi * rates.profi },
-    { label: "Top Feature", qty: tf,     monthly: rates.top_feature, total_month: tf * rates.top_feature },
-  ].filter(b => b.qty > 0),
-  term_months: term,
-  monthly, total, purchase_equiv, savings, units,
-};
+```python
+lead = input_data["lead"] or {}
+
+rates    = {"leader": 42,   "profi": 58,   "top_feature": 80}
+purchase = {"leader": 3200, "profi": 4600, "top_feature": 6500}
+
+leader = int(lead.get("bundle_leader")      or 0)
+profi  = int(lead.get("bundle_profi")       or 0)
+tf     = int(lead.get("bundle_top_feature") or 0)
+units  = leader + profi + tf
+term   = int(lead.get("preferred_term_months") or 60)
+
+monthly = leader * rates["leader"] + profi * rates["profi"] + tf * rates["top_feature"]
+total   = monthly * term
+purchase_equiv = leader * purchase["leader"] + profi * purchase["profi"] + tf * purchase["top_feature"]
+savings = max(0, purchase_equiv - total)
+
+bundles = [
+    {"label": "Leader",      "qty": leader, "monthly": rates["leader"],      "total_month": leader * rates["leader"]},
+    {"label": "Profi",       "qty": profi,  "monthly": rates["profi"],       "total_month": profi  * rates["profi"]},
+    {"label": "Top Feature", "qty": tf,     "monthly": rates["top_feature"], "total_month": tf     * rates["top_feature"]},
+]
+bundles = [b for b in bundles if b["qty"] > 0]
+
+output = {
+    "company_name":  lead.get("company_name"),
+    "contact_name":  lead.get("person_name"),
+    "contact_email": lead.get("contact_address") or lead.get("person_email"),
+    "city":          lead.get("city"),
+    "bundles":       bundles,
+    "term_months":   term,
+    "monthly":       monthly,
+    "total":         total,
+    "purchase_equiv": purchase_equiv,
+    "savings":       savings,
+    "units":         units,
+}
 ```
+
+Downstream nodes reference values as `@compute.monthly`, `@compute.bundles`, etc.
 
 ### 2.4 AI Generate — render email body
 
