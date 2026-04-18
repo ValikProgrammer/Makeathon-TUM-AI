@@ -65,13 +65,14 @@ export async function POST(req: NextRequest) {
     case "kate.call_ended": {
       if (!lead_id || !meta) break;
       const outcome = meta.outcome as string;
+      const envelope = meta.envelope as Partial<Envelope> | undefined;
       if (outcome === "opted_in") {
-        updateLeadStage(lead_id, "qualified", { optIn: true });
+        updateLeadStage(lead_id, "qualified", { optIn: true, ...(envelope ? { envelope } : {}) });
       } else if (outcome === "opted_out") {
-        updateLeadStage(lead_id, "signal", { optIn: false });
+        updateLeadStage(lead_id, "signal", { optIn: false, ...(envelope ? { envelope } : {}) });
       } else if (outcome === "escalated") {
         const lead = getLeadById(lead_id);
-        if (lead) updateLeadStage(lead_id, lead.stage, { escalated: true, escalationReason: String(meta.reason ?? "") });
+        if (lead) updateLeadStage(lead_id, lead.stage, { escalated: true, escalationReason: String(meta.reason ?? ""), ...(envelope ? { envelope } : {}) });
       }
       break;
     }
