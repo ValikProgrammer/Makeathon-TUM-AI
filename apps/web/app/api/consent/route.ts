@@ -28,8 +28,17 @@ function makeRef(): string {
 }
 
 export async function POST(req: NextRequest) {
+  console.log("\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+  console.log("📋 [POST /api/consent] — landing page consent submission");
+  console.log(`   KATE_WEBHOOK present: ${KATE_WEBHOOK ? "YES ✅" : "NO ❌ — Kate won't be triggered!"}`);
+  console.log(`   HR_API_KEY present:   ${HR_API_KEY ? "YES ✅" : "NO ⚠️"}`);
+  console.log(`   CALLBACK_URL:         ${CALLBACK_URL || "⚠️  NOT SET"}`);
+  console.log(`   EVENTS_URL:           ${EVENTS_URL || "⚠️  NOT SET"}`);
+  console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+
   const body = await req.json().catch(() => null);
   if (!body) {
+    console.log("❌ [/api/consent] 400 — invalid JSON body");
     return NextResponse.json({ error: "invalid body" }, { status: 400 });
   }
 
@@ -40,22 +49,28 @@ export async function POST(req: NextRequest) {
     motivation?: string;
   };
 
+  console.log(`📥 [/api/consent] lead_id="${lead_id}" phone="${phone}" motivation="${motivation ?? "—"}"`);
+
   if (!lead_id || typeof lead_id !== "string") {
+    console.log("❌ [/api/consent] 400 — missing lead_id");
     return NextResponse.json({ error: "lead_id required" }, { status: 400 });
   }
   if (!phone || typeof phone !== "string" || phone.trim().length < 5) {
+    console.log("❌ [/api/consent] 400 — invalid phone");
     return NextResponse.json({ error: "valid phone required" }, { status: 400 });
   }
 
   const lead = await getLeadById(lead_id);
   if (!lead) {
+    console.log(`❌ [/api/consent] 404 — lead "${lead_id}" not found in Twin DB`);
     return NextResponse.json({ error: "lead not found" }, { status: 404 });
   }
+  console.log(`✅ [/api/consent] Lead found: "${lead.company_name}", stage="${lead.stage}"`);
 
   const cleanPhone = phone.trim();
 
-  // DNC check
   if (isDnc(cleanPhone) || isDnc(lead.person_email ?? "")) {
+    console.log(`🚫 [/api/consent] 403 — contact on DNC list (phone="${cleanPhone}")`);
     return NextResponse.json({ error: "contact is on DNC list" }, { status: 403 });
   }
 
@@ -67,13 +82,19 @@ export async function POST(req: NextRequest) {
   const resolvedMotivation = (motivation ?? lead.motivation_string ?? "simplify") as MotivationString;
 
   // 1. Save consent + phone to DB
-  await updateLead(lead_id, {
+  console.log(`💾 [/api/consent] Saving consent to Twin: phone="${cleanPhone}", motivation="${resolvedMotivation}", ip="${ip}"`);
+  const saved = await updateLead(lead_id, {
     person_phone:         cleanPhone,
     consent_given_at:     new Date().toISOString(),
     consent_text_version: consent_text_version,
     consent_ip:           ip,
     motivation_string:    resolvedMotivation,
   });
+  if (!saved) {
+    console.error(`❌ [/api/consent] Twin DB update failed for lead "${lead_id}" — consent NOT saved!`);
+  } else {
+    console.log(`✅ [/api/consent] Consent saved to Twin for lead "${lead_id}"`);
+  }
 
   appendAudit({
     timestamp: new Date().toISOString(),
@@ -84,9 +105,9 @@ export async function POST(req: NextRequest) {
   });
 
   const reference = makeRef();
-  console.log(`[/api/consent] lead="${lead_id}" phone="${cleanPhone}" ref="${reference}"`);
+  console.log(`🔖 [/api/consent] Reference: "${reference}"`);
 
-  // 2. Fire Kate immediately (fire-and-forget, don't block the response)
+  // 2. Fire Kate immediately (fire-and-forget)
   if (KATE_WEBHOOK) {
     const katePayload = {
       to:               cleanPhone,
@@ -106,6 +127,9 @@ export async function POST(req: NextRequest) {
       events_url:       EVENTS_URL,
     };
 
+    console.log(`🚀 [/api/consent] Firing Kate webhook → ${KATE_WEBHOOK}`);
+    console.log(`   payload: to="${cleanPhone}" lead_id="${lead_id}" motivation="${resolvedMotivation}"`);
+
     fetch(KATE_WEBHOOK, {
       method:  "POST",
       headers: {
@@ -116,19 +140,27 @@ export async function POST(req: NextRequest) {
     })
       .then(async (r) => {
         const text = await r.text();
-        console.log(`[/api/consent] Kate webhook → ${r.status}: ${text}`);
-        appendAudit({
-          timestamp: new Date().toISOString(),
-          agent:     "caller",
-          event:     "kate.call_started",
-          leadId:    lead_id,
-          meta:      { run: JSON.parse(text), triggered_by: "landing_page_consent" },
-        });
+        if (r.ok) {
+          console.log(`✅ [/api/consent] Kate accepted (${r.status}): ${text}`);
+        } else {
+          console.error(`❌ [/api/consent] Kate webhook error ${r.status}: ${text}`);
+        }
+        try {
+          appendAudit({
+            timestamp: new Date().toISOString(),
+            agent:     "caller",
+            event:     "kate.call_started",
+            leadId:    lead_id,
+            meta:      { run: JSON.parse(text), triggered_by: "landing_page_consent" },
+          });
+        } catch { /* text not JSON — ok */ }
       })
-      .catch((err) => console.error(`[/api/consent] Kate webhook failed: ${err?.message}`));
+      .catch((err) => console.error(`❌ [/api/consent] Kate webhook network error: ${err?.message}`));
   } else {
-    console.warn("[/api/consent] HAPPYROBOT_CALLER_WEBHOOK_URL not set — Kate not triggered");
+    console.error("❌ [/api/consent] HAPPYROBOT_CALLER_WEBHOOK_URL not set — Kate NOT triggered!");
   }
 
+  console.log(`✅ [/api/consent] Done. lead="${lead_id}" ref="${reference}"`);
+  console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n");
   return NextResponse.json({ ok: true, reference });
 }

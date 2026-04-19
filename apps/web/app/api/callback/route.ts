@@ -147,8 +147,12 @@ export async function POST(req: NextRequest) {
   });
   console.log(`📝 [/api/callback] Audit entry "kate.call_ended" saved`);
 
-  await updateLeadStage(lead_id, nextStage, patch);
-  console.log(`💾 [/api/callback] Lead "${lead_id}" updated in DB. New stage: "${nextStage}"`);
+  const updated = await updateLeadStage(lead_id, nextStage, patch);
+  if (!updated) {
+    console.error(`❌ [/api/callback] Twin DB update FAILED for lead "${lead_id}" → stage "${nextStage}". Check TWIN_API_KEY on Vercel!`);
+  } else {
+    console.log(`💾 [/api/callback] Lead "${lead_id}" updated in Twin. New stage: "${nextStage}"`);
+  }
 
   // Fire Otto if prospect opted in and passed homologation
   if (optIn && callOutcome === "qualified") {

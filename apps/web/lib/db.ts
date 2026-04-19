@@ -137,15 +137,21 @@ function rowToLead(row: Record<string, unknown>): Lead {
 // ── Lead CRUD (async — all go to Twin) ────────────────────────────────────
 
 export async function getLeads(): Promise<Lead[]> {
+  if (!TWIN_TOKEN) {
+    console.error("[Twin] getLeads: TWIN_API_KEY is not set — returning empty list!");
+    return [];
+  }
   const res = await fetch(`${TWIN_BASE}/twin/tables/${TWIN_TABLE}?limit=500`, {
     headers: twinHeaders(),
     cache: "no-store",
   });
   if (!res.ok) {
-    console.error(`[Twin] getLeads failed: ${res.status} ${await res.text()}`);
+    const body = await res.text();
+    console.error(`[Twin] getLeads failed: ${res.status} ${body}`);
     return [];
   }
   const data = await res.json() as { rows: Record<string, unknown>[] };
+  console.log(`[Twin] getLeads ok: ${data.rows?.length ?? 0} rows`);
   return (data.rows ?? []).map(rowToLead);
 }
 
@@ -194,6 +200,10 @@ export async function upsertLead(lead: Partial<Lead> & { id: string; company_nam
 }
 
 export async function updateLead(id: string, patch: Partial<Lead>): Promise<Lead | null> {
+  if (!TWIN_TOKEN) {
+    console.error(`[Twin] updateLead: TWIN_API_KEY not set — cannot update lead "${id}"!`);
+    return null;
+  }
   const updates = { ...patch, updated_at: new Date().toISOString() };
   const res = await fetch(`${TWIN_BASE}/twin/tables/${TWIN_TABLE}/rows`, {
     method: "PATCH",
@@ -201,10 +211,11 @@ export async function updateLead(id: string, patch: Partial<Lead>): Promise<Lead
     body: JSON.stringify({ primaryKey: { id }, updates }),
   });
   if (!res.ok) {
-    console.error(`[Twin] updateLead failed for ${id}: ${res.status} ${await res.text()}`);
+    const body = await res.text();
+    console.error(`[Twin] updateLead FAILED for "${id}": ${res.status} ${body}`);
     return null;
   }
-  console.log(`[Twin] updateLead ok: ${id}`, Object.keys(updates).join(", "));
+  console.log(`[Twin] updateLead ok: "${id}" fields: ${Object.keys(patch).join(", ")}`);
   return (await getLeadById(id)) ?? null;
 }
 
