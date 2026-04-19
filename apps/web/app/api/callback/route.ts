@@ -39,7 +39,6 @@ import { NextRequest, NextResponse } from "next/server";
 import { getLeadById, getLeadByPhone, updateLeadStage, appendAudit, type Lead, type Stage } from "@/lib/db";
 
 const OTTO_WEBHOOK = process.env.HAPPYROBOT_OTTO_WEBHOOK_URL ?? "";
-const OTTO_API_KEY = process.env.OTTO_API_KEY ?? "";
 const HAPPYROBOT_API_KEY = process.env.HAPPYROBOT_API_KEY ?? "";
 const EVENTS_URL = process.env.EVENTS_URL ?? "";
 
@@ -161,14 +160,14 @@ export async function POST(req: NextRequest) {
 
       console.log(`🚀 [/api/callback] opt_in=true + outcome=qualified → firing Otto`);
       console.log(`   → POST ${OTTO_WEBHOOK}`);
-      console.log(`   → Header x-api-key present: ${!!OTTO_API_KEY}`);
+      console.log(`   → Authorization: Bearer present: ${!!HAPPYROBOT_API_KEY}`);
       console.log(`   → Body:`, JSON.stringify(ottoPayload));
 
       fetch(OTTO_WEBHOOK, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          ...(OTTO_API_KEY ? { "x-api-key": OTTO_API_KEY } : {}),
+          ...(HAPPYROBOT_API_KEY ? { Authorization: `Bearer ${HAPPYROBOT_API_KEY}` } : {}),
         },
         body: JSON.stringify(ottoPayload),
       }).then(async (r) => {
