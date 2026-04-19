@@ -203,7 +203,7 @@ export async function updateLead(id: string, patch: Partial<Lead>): Promise<Lead
     return null;
   }
   console.log(`[Twin] updateLead ok: ${id}`, Object.keys(updates).join(", "));
-  return getLeadById(id);
+  return (await getLeadById(id)) ?? null;
 }
 
 export async function updateLeadStage(id: string, stage: Stage, extra?: Partial<Lead>): Promise<Lead | null> {
