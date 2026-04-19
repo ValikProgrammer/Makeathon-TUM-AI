@@ -65,11 +65,36 @@ export async function GET(req: NextRequest) {
 
   console.log(`[/api/purchase] GET lead="${lead_id}" → accepted`);
 
-  // Redirect to a thank-you page (landing page with confirmation param)
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "";
-  const redirect = appUrl
-    ? `${appUrl}/api/l?id=${lead_id}&accepted=1`
-    : `/api/l?id=${lead_id}&accepted=1`;
+  const html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Offer accepted · lease·a·kitchen</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Inter', sans-serif; background: #f1f5f9; min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 24px; }
+  .card { background: white; border-radius: 12px; padding: 56px 48px; max-width: 480px; width: 100%; text-align: center; box-shadow: 0 8px 30px rgba(15,23,42,.08); }
+  .icon { font-size: 48px; margin-bottom: 24px; }
+  h1 { font-size: 24px; font-weight: 700; color: #0F172A; margin-bottom: 12px; letter-spacing: -0.02em; }
+  p { font-size: 15px; color: #64748B; line-height: 1.6; margin-bottom: 8px; }
+  .ref { margin-top: 32px; font-size: 12px; color: #94A3B8; font-family: monospace; }
+  .brand { margin-top: 40px; font-size: 12px; color: #94A3B8; }
+  .brand strong { color: #115E59; }
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="icon">✅</div>
+  <h1>Thank you, ${lead.person_name ?? ""}!</h1>
+  <p>Your proposal for <strong>${lead.company_name}</strong> has been accepted.</p>
+  <p>Our team will be in touch within one business day to confirm next steps.</p>
+  <div class="ref">Ref: ${lead_id}</div>
+  <div class="brand">operated by <strong>lease·a·kitchen</strong> · orgaloom GmbH · Munich</div>
+</div>
+</body>
+</html>`;
 
-  return NextResponse.redirect(redirect, 302);
+  return new NextResponse(html, { headers: { "Content-Type": "text/html; charset=utf-8" } });
 }
