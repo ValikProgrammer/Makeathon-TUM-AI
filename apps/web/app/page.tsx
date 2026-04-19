@@ -351,6 +351,17 @@ function LeadModal({ lead, onClose, onQualify, qualifying }: {
           <div>
             <div className="font-semibold text-[16px]">{lead.company_name}</div>
             <div className="text-[13px] text-neutral-400">{[lead.street, lead.postal_code, lead.city].filter(Boolean).join(" · ")}</div>
+            <div className="mt-1 flex items-center gap-2">
+              <span className="text-[11px] font-mono bg-neutral-100 text-neutral-500 px-2 py-0.5 rounded select-all">{lead.id}</span>
+              <a
+                href={`/api/l?id=${lead.id}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-[11px] text-blue-500 hover:underline"
+              >
+                Landing ↗
+              </a>
+            </div>
           </div>
           <button onClick={onClose} className="text-neutral-400 hover:text-neutral-700 text-xl">×</button>
         </div>
@@ -369,16 +380,30 @@ function LeadModal({ lead, onClose, onQualify, qualifying }: {
         )}
 
         {/* Contact */}
-        {(lead.person_name || lead.person_email) && (
-          <div className="space-y-1 text-[13px]">
-            <div className="text-[11px] font-medium text-neutral-400 uppercase tracking-wide">Contact</div>
-            {lead.person_name && <div className="font-medium">{lead.person_name}</div>}
-            <div className="text-neutral-500">
-              {[lead.person_role, lead.person_phone].filter(Boolean).join(" · ")}
+        <div className="space-y-1.5 text-[13px]">
+          <div className="text-[11px] font-medium text-neutral-400 uppercase tracking-wide">Contact</div>
+          {lead.person_name && <div className="font-medium">{lead.person_name}{lead.person_role && <span className="font-normal text-neutral-400"> · {lead.person_role}</span>}</div>}
+          {lead.person_email && (
+            <a href={`mailto:${lead.person_email}`} className="flex items-center gap-1.5 text-neutral-600 hover:text-blue-600">
+              <span>✉</span> {lead.person_email}
+            </a>
+          )}
+          {lead.person_phone && (
+            <div className="flex items-center gap-1.5 text-neutral-600">
+              <span>📞</span> {lead.person_phone}
+              {lead.consent_given_at && (
+                <span className="text-[10px] text-green-600 bg-green-50 px-1.5 py-0.5 rounded">
+                  consent {new Date(lead.consent_given_at).toLocaleDateString("de-DE")}
+                </span>
+              )}
             </div>
-            {lead.person_email && <div className="text-neutral-500">{lead.person_email}</div>}
-          </div>
-        )}
+          )}
+          {lead.url && (
+            <a href={lead.url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 text-neutral-400 hover:text-blue-500 text-[12px]">
+              <span>🌐</span> {lead.url}
+            </a>
+          )}
+        </div>
 
         {/* Qualification fields */}
         <div className="space-y-2">
@@ -423,6 +448,26 @@ function LeadModal({ lead, onClose, onQualify, qualifying }: {
           <div className={`text-[12px] px-3 py-1.5 rounded-lg font-medium ${lead.opt_in ? "bg-green-50 text-green-700" : "bg-red-50 text-red-700"}`}>
             {lead.opt_in ? "✓ Opt-in confirmed" : "✗ Opted out"}
           </div>
+        )}
+
+        {/* Call notes */}
+        {lead.call_notes && (
+          <div className="space-y-1">
+            <div className="text-[11px] font-medium text-neutral-400 uppercase tracking-wide">Call notes</div>
+            <div className="text-[12px] text-neutral-600 bg-neutral-50 rounded-lg p-3 leading-relaxed">{lead.call_notes}</div>
+          </div>
+        )}
+
+        {/* Transcript link */}
+        {lead.call_transcript_url && (
+          <a
+            href={lead.call_transcript_url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="block text-[12px] text-blue-500 hover:underline"
+          >
+            📄 View call transcript ↗
+          </a>
         )}
 
         {/* Actions */}

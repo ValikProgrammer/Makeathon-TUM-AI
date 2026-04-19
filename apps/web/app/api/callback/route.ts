@@ -61,15 +61,13 @@ export async function POST(req: NextRequest) {
   }
   console.log("📥 [/api/callback] Body received:", JSON.stringify(body, null, 2));
 
-  // Try every possible ID field HappyRobot might send
-  const raw_id: string = body.contact_id ?? body.lead_id ?? body.id ?? body.user_id ?? "";
-  console.log(`🔍 [/api/callback] Looking up lead: contact_id="${body.contact_id}" | lead_id="${body.lead_id}" | to="${body.to}"`);
+  const raw_id: string = body.lead_id ?? "";
+  console.log(`🔍 [/api/callback] lead_id="${raw_id}" | to="${body.to}"`);
   console.log(`📋 [/api/callback] Full body keys: ${Object.keys(body).join(", ")}`);
 
-  // 1. By explicit ID   2. By phone number   3. By email
+  // Primary: lead_id. Fallback: phone (in case HR didn't pass lead_id)
   const lead = (raw_id ? await getLeadById(raw_id) : undefined)
-    ?? await getLeadByPhone(body.to ?? "")
-    ?? await getLeadByPhone(body.phone ?? "");
+    ?? await getLeadByPhone(body.to ?? "");
 
   if (!lead) {
     // Return 200 so HappyRobot doesn't retry — log for debugging
