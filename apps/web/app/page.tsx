@@ -65,8 +65,8 @@ const COLUMNS: { key: string; label: string; accent: string; matches: (s: Stage)
   { key: "new",        label: "Signal identified", accent: "#0071e3", matches: (s) => s === "new" },
   { key: "qualified",  label: "Qualified",         accent: "#af52de", matches: (s) => s === "qualified" },
   { key: "offered",    label: "Offer sent",        accent: "#ff9500", matches: (s) => s === "offered" },
-  { key: "closed",     label: "Closed",            accent: "#34c759", matches: (s) => s === "accepted" || s === "rejected" },
-  { key: "archive",    label: "Archive",           accent: "#8e8e93", matches: (s) => s === "homologation_fail" || s === "not_interested" || s === "suppressed" },
+  { key: "closed",     label: "Closed",            accent: "#34c759", matches: (s) => s === "accepted" },
+  { key: "archive",    label: "Archive",           accent: "#8e8e93", matches: (s) => s === "homologation_fail" || s === "not_interested" || s === "suppressed" || s === "rejected" || s === "escalated" },
 ];
 
 const MOTIVATION_COLOR: Record<MotivationString, string> = {

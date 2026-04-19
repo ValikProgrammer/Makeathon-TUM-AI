@@ -43,6 +43,11 @@ const OTTO_API_KEY = process.env.OTTO_API_KEY ?? "";
 const HAPPYROBOT_API_KEY = process.env.HAPPYROBOT_API_KEY ?? "";
 const EVENTS_URL = process.env.EVENTS_URL ?? "";
 
+// HappyRobot probes the URL with GET before sending data
+export function GET() {
+  return NextResponse.json({ ok: true, endpoint: "callback" });
+}
+
 export async function POST(req: NextRequest) {
   console.log("\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
   console.log("📞 [POST /api/callback] — Kate (Caller) call-ended webhook");
