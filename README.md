@@ -60,17 +60,16 @@ get(user_id)
 
 
 
-
 ### Additional info
 Actors: Cockpit, Manager, Jack, Kate, Otto, Emploee
-Canband board columns: potential customer, 
+Canband board columns: potential customer,
 Pipeline:
 1. Manager clicks a button to start information gathering by Jack
 2. Cockpit triggers Jack using webhook
 3. Jack uses mock data already included in the database (find later) to generate a motivational line and a score
 4. Jack writes them into the database
-5. Jack generates QR codes for each user_id with 
-5. Jack sends an email to employee with pdf file or images of 
+5. Jack generates QR codes for each user_id with
+5. Jack sends an email to employee with pdf file or images of
 5. Jack notifies cockpit that it is finished (list of user_ids is sent)
 6. Cockpit fetches the data base to display new entries in "potential customer" column with:
 - Person name
