@@ -61,17 +61,20 @@ export async function POST(req: NextRequest) {
   }
   console.log("📥 [/api/callback] Body received:", JSON.stringify(body, null, 2));
 
-  const raw_id: string = body.contact_id ?? body.lead_id ?? "";
-  console.log(`🔍 [/api/callback] Looking up lead: contact_id="${body.contact_id}" | lead_id="${body.lead_id}" | phone="${body.to}"`);
+  // Try every possible ID field HappyRobot might send
+  const raw_id: string = body.contact_id ?? body.lead_id ?? body.id ?? body.user_id ?? "";
+  console.log(`🔍 [/api/callback] Looking up lead: contact_id="${body.contact_id}" | lead_id="${body.lead_id}" | to="${body.to}"`);
+  console.log(`📋 [/api/callback] Full body keys: ${Object.keys(body).join(", ")}`);
 
-  // Primary: look up by our lead_id / contact_id
-  // Fallback: look up by phone number (HR sends "to" field reliably)
+  // 1. By explicit ID   2. By phone number   3. By email
   const lead = (raw_id ? await getLeadById(raw_id) : undefined)
-    ?? await getLeadByPhone(body.to ?? "");
+    ?? await getLeadByPhone(body.to ?? "")
+    ?? await getLeadByPhone(body.phone ?? "");
 
   if (!lead) {
-    console.log(`❌ [/api/callback] 404 — Lead not found. raw_id="${raw_id}", to="${body.to}"`);
-    return NextResponse.json({ error: "lead not found", received_id: raw_id, received_to: body.to }, { status: 404 });
+    // Return 200 so HappyRobot doesn't retry — log for debugging
+    console.log(`⚠️  [/api/callback] Lead not found — raw_id="${raw_id}", to="${body.to}". Returning 200 to stop retries.`);
+    return NextResponse.json({ ok: false, error: "lead not found", received_id: raw_id, received_to: body.to });
   }
   console.log(`✅ [/api/callback] Lead found: id="${lead.id}", company="${lead.company_name}", current stage="${lead.stage}"`);
 
