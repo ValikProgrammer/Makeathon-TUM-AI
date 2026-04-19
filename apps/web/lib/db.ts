@@ -18,6 +18,8 @@ function ensureDir() {
   if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
 }
 
+const AUDIT_TABLE = process.env.TWIN_AUDIT_TABLE ?? "audit_untor";
+
 // ── Types ──────────────────────────────────────────────────────────────────
 
 export type Stage =
@@ -213,13 +215,38 @@ export async function updateLeadStage(id: string, stage: Stage, extra?: Partial<
 // ── Audit (local JSON) ─────────────────────────────────────────────────────
 
 export function appendAudit(entry: Omit<AuditEntry, "id">): AuditEntry {
-  ensureDir();
-  const entries: AuditEntry[] = fs.existsSync(AUDIT_FILE)
-    ? JSON.parse(fs.readFileSync(AUDIT_FILE, "utf-8"))
-    : [];
   const full: AuditEntry = { id: `audit_${Date.now()}`, ...entry };
-  entries.push(full);
-  fs.writeFileSync(AUDIT_FILE, JSON.stringify(entries, null, 2));
+
+  // Write to Twin (fire-and-forget — never blocks the caller)
+  if (TWIN_TOKEN) {
+    fetch(`${TWIN_BASE}/twin/tables/${AUDIT_TABLE}/rows`, {
+      method: "POST",
+      headers: twinHeaders(),
+      body: JSON.stringify({
+        values: {
+          id:        full.id,
+          timestamp: full.timestamp,
+          agent:     full.agent,
+          event:     full.event,
+          lead_id:   full.leadId ?? null,
+          meta:      full.meta ? JSON.stringify(full.meta) : null,
+        },
+      }),
+    }).catch((err) => console.log("[audit] Twin write failed:", err?.message));
+  }
+
+  // Also write to local file in dev (silently skip on Vercel read-only FS)
+  try {
+    ensureDir();
+    const entries: AuditEntry[] = fs.existsSync(AUDIT_FILE)
+      ? JSON.parse(fs.readFileSync(AUDIT_FILE, "utf-8"))
+      : [];
+    entries.push(full);
+    fs.writeFileSync(AUDIT_FILE, JSON.stringify(entries, null, 2));
+  } catch {
+    console.log("[audit]", JSON.stringify(full));
+  }
+
   return full;
 }
 
@@ -256,7 +283,11 @@ export function addDnc(type: "phone" | "email" | "whatsapp" | "org", value: stri
   const dnc = readDnc();
   const key = type === "org" ? "organisations" : type === "phone" ? "phones" : type === "email" ? "emails" : "whatsapp";
   if (!dnc[key].includes(value)) dnc[key].push(value);
-  fs.writeFileSync(DNC_FILE, JSON.stringify({ ...dnc, updated_at: new Date().toISOString() }, null, 2));
+  try {
+    fs.writeFileSync(DNC_FILE, JSON.stringify({ ...dnc, updated_at: new Date().toISOString() }, null, 2));
+  } catch {
+    console.log("[dnc] filesystem read-only, DNC entry not persisted:", type, value);
+  }
 }
 
 // ── Pricing helpers ────────────────────────────────────────────────────────
