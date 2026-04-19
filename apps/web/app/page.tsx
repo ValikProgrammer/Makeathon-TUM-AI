@@ -274,7 +274,10 @@ function LeadCard({ lead, accent, qualifying, onQualify, onOpen }: {
       <div className="flex items-start justify-between gap-2">
         <div>
           <div className="text-[13px] font-semibold leading-tight">{lead.company_name}</div>
-          <div className="text-[11px] text-neutral-400 mt-0.5">{[lead.street, lead.city].filter(Boolean).join(" · ")}</div>
+          <div className="text-[11px] text-neutral-400 mt-0.5">
+            {lead.person_name && <span className="text-neutral-600">{lead.person_name} · </span>}
+            {[lead.street, lead.city].filter(Boolean).join(" · ")}
+          </div>
         </div>
         <div className="w-2 h-2 rounded-full mt-1 shrink-0" style={{ background: SCORE_COLOR[tier] }} title={`Score tier: ${tier}`} suppressHydrationWarning />
       </div>
