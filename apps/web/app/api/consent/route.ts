@@ -95,7 +95,7 @@ export async function POST(req: NextRequest) {
       contact_name:     lead.person_name   ?? "",
       contact_role:     lead.person_role   ?? "",
       contact_email:    lead.person_email  ?? "",
-      facility_name:    lead.company_name,
+      company_name:     lead.company_name,
       city:             lead.city          ?? "",
       signal_summary:   lead.signal_summary ?? `new senior-living facility in ${lead.city ?? "Germany"}`,
       signal_url:       lead.signal_url    ?? "",
