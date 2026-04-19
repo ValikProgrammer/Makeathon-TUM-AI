@@ -412,18 +412,26 @@ function LeadModal({ lead, onClose, onQualify, qualifying }: {
         <div className="space-y-2">
           <div className="flex items-center justify-between">
             <div className="text-[11px] font-medium text-neutral-400 uppercase tracking-wide">Qualification</div>
-            <div className="text-[11px] text-neutral-500">{filled}/{envFields.length} fields</div>
-          </div>
-          <div className="w-full bg-neutral-100 rounded-full h-1.5">
-            <div className="h-1.5 rounded-full bg-purple-500" style={{ width: `${completeness * 100}%` }} />
-          </div>
-          <div className="grid grid-cols-2 gap-2">
-            {envFields.map((f) => (
-              <div key={String(f.key)} className="bg-neutral-50 rounded-lg p-2.5">
-                <div className="text-[10px] text-neutral-400">{f.label}</div>
-                <div className="text-[13px] font-medium text-neutral-700 truncate">{String(lead[f.key] ?? "—")}</div>
+            <div className="flex items-center gap-2">
+              <div className="w-24 bg-neutral-100 rounded-full h-1.5">
+                <div className="h-1.5 rounded-full bg-purple-500 transition-all" style={{ width: `${completeness * 100}%` }} />
               </div>
-            ))}
+              <span className="text-[11px] text-neutral-400">{filled}/{envFields.length}</span>
+            </div>
+          </div>
+          <div className="divide-y divide-neutral-100 rounded-xl border border-neutral-100 overflow-hidden">
+            {envFields.map((f) => {
+              const val = lead[f.key];
+              const empty = val === undefined || val === null || val === "";
+              return (
+                <div key={String(f.key)} className="flex items-center justify-between px-3 py-2 bg-white">
+                  <span className="text-[11px] text-neutral-400">{f.label}</span>
+                  <span className={`text-[12px] font-medium ${empty ? "text-neutral-300" : "text-neutral-700"}`}>
+                    {empty ? "—" : String(val)}
+                  </span>
+                </div>
+              );
+            })}
           </div>
         </div>
 
@@ -431,46 +439,44 @@ function LeadModal({ lead, onClose, onQualify, qualifying }: {
         {bundleTotal > 0 && (
           <div className="space-y-2">
             <div className="text-[11px] font-medium text-neutral-400 uppercase tracking-wide">Bundle mix</div>
-            <div className="grid grid-cols-3 gap-2">
-              {bundles.map((b) => (
-                <div key={String(b.key)} className="bg-neutral-50 rounded-lg p-2.5">
-                  <div className="text-[10px] text-neutral-400">{b.label}</div>
-                  <div className="text-[14px] font-semibold text-neutral-700">{Number(lead[b.key] ?? 0)} ×</div>
-                  <div className="text-[10px] text-neutral-400">€{b.monthly}/mo each</div>
-                </div>
-              ))}
-            </div>
-            <div className="text-[11px] text-neutral-500 text-right">
-              Monthly rate ≈ €{monthlyRate(lead).toLocaleString()} · Total ≈ €{(estPipelineValue(lead) / 1000).toFixed(0)}k
+            <div className="divide-y divide-neutral-100 rounded-xl border border-neutral-100 overflow-hidden">
+              {bundles.map((b) => {
+                const qty = Number(lead[b.key] ?? 0);
+                if (!qty) return null;
+                return (
+                  <div key={String(b.key)} className="flex items-center justify-between px-3 py-2 bg-white">
+                    <div>
+                      <span className="text-[12px] font-medium text-neutral-700">{b.label}</span>
+                      <span className="text-[11px] text-neutral-400 ml-1.5">€{b.monthly}/mo each</span>
+                    </div>
+                    <span className="text-[13px] font-semibold text-neutral-800">{qty} ×</span>
+                  </div>
+                );
+              })}
+              <div className="flex items-center justify-between px-3 py-2 bg-neutral-50">
+                <span className="text-[11px] text-neutral-500">Monthly · {lead.preferred_term_months ?? 60} mo total</span>
+                <span className="text-[13px] font-semibold text-neutral-800">€{monthlyRate(lead).toLocaleString()} · €{(estPipelineValue(lead)/1000).toFixed(0)}k</span>
+              </div>
             </div>
           </div>
         )}
 
-        {/* Opt-in / consent badge */}
+        {/* Opt-in + offer email */}
         {lead.opt_in !== undefined && lead.opt_in !== null && (
-          <div className={`text-[12px] px-3 py-1.5 rounded-lg font-medium ${lead.opt_in ? "bg-green-50 text-green-700" : "bg-red-50 text-red-700"}`}>
-            {lead.opt_in ? "✓ Opt-in confirmed" : "✗ Opted out"}
+          <div className={`text-[12px] px-3 py-2 rounded-xl font-medium flex items-center justify-between ${lead.opt_in ? "bg-green-50 text-green-700" : "bg-red-50 text-red-700"}`}>
+            <span>{lead.opt_in ? "✓ Opted in" : "✗ Opted out"}</span>
+            {lead.opt_in && lead.contact_address && (
+              <span className="font-normal text-green-600 text-[11px]">offer → {lead.contact_address}</span>
+            )}
           </div>
         )}
 
         {/* Call notes */}
         {lead.call_notes && (
           <div className="space-y-1">
-            <div className="text-[11px] font-medium text-neutral-400 uppercase tracking-wide">Call notes</div>
-            <div className="text-[12px] text-neutral-600 bg-neutral-50 rounded-lg p-3 leading-relaxed">{lead.call_notes}</div>
+            <div className="text-[11px] font-medium text-neutral-400 uppercase tracking-wide">Kate&apos;s notes</div>
+            <div className="text-[12px] text-neutral-600 bg-neutral-50 rounded-xl p-3 leading-relaxed border border-neutral-100">{lead.call_notes}</div>
           </div>
-        )}
-
-        {/* Transcript link */}
-        {lead.call_transcript_url && (
-          <a
-            href={lead.call_transcript_url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="block text-[12px] text-blue-500 hover:underline"
-          >
-            📄 View call transcript ↗
-          </a>
         )}
 
         {/* Actions */}
