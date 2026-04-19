@@ -1,0 +1,524 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>lease·a·kitchen · Demo-Postkarten</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  /* Postcard layout: A6 landscape (148 × 105 mm), 1 card per A4 page.
+     Address side complies with Deutsche Post DIN A6 rules:
+       - Frankierzone 74 × 40 mm (top right) — keep simple
+       - Codierzone 148 × 15 mm (bottom)     — MUST stay empty
+       - Trennstrich 1.2 mm vertical          — 5 mm clearance both sides
+       - Sicherheitsabstand 3 mm to all edges for important content
+     QR via api.qrserver.com (PNG). Inter via Google Fonts. */
+
+  @page {
+    size: A4 portrait;
+    margin: 0;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body {
+    background: #e2e8f0;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    color: #0F172A;
+  }
+
+  /* ── Palettes per motivation ───────────────────────────────── */
+  .m-optimize { --hook: #1E40AF; --hook-soft: #DBEAFE; --hook-dark: #1E3A8A; }
+  .m-scale    { --hook: #9A3412; --hook-soft: #FED7AA; --hook-dark: #7C2D12; }
+  .m-simplify { --hook: #0F766E; --hook-soft: #99F6E4; --hook-dark: #134E4A; }
+
+  /* ── A4 page wrapper, prints 1 card centered with crop marks ─ */
+  .page {
+    width: 210mm;
+    height: 297mm;
+    background: #ffffff;
+    margin: 0 auto;
+    padding: 22mm 31mm;
+    page-break-after: always;
+    position: relative;
+  }
+  .crop {
+    position: absolute;
+    width: 6mm;
+    height: 6mm;
+    border-color: #94a3b8;
+    border-style: solid;
+  }
+  .crop.tl { top: 19mm;     left: 28mm;     border-width: 1px 0 0 1px; }
+  .crop.tr { top: 19mm;     right: 28mm;    border-width: 1px 1px 0 0; }
+  .crop.bl { bottom: 169mm; left: 28mm;     border-width: 0 0 1px 1px; }
+  .crop.br { bottom: 169mm; right: 28mm;    border-width: 0 1px 1px 0; }
+
+  /* ── The actual postcard ──────────────────────────────────── */
+  .card {
+    width: 148mm;
+    height: 105mm;
+    overflow: hidden;
+    position: relative;
+    background: #fefefe;
+  }
+
+  /* ─── FRONT (Vorderseite — frei gestaltbar) ─── */
+  .card.front {
+    background:
+      linear-gradient(135deg, var(--hook) 0%, var(--hook-dark) 100%);
+    color: white;
+    padding: 12mm 14mm;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+  }
+  .card.front .logo svg {
+    height: 8mm;
+    filter: brightness(0) invert(1);
+  }
+  .card.front .headline {
+    font-size: 32pt;
+    font-weight: 800;
+    line-height: 1.05;
+    letter-spacing: -0.025em;
+    margin-bottom: 4mm;
+  }
+  .card.front .sub {
+    font-size: 11pt;
+    font-weight: 500;
+    opacity: 0.85;
+    line-height: 1.4;
+    max-width: 110mm;
+  }
+  .card.front .ornament {
+    position: absolute;
+    right: -10mm;
+    bottom: -10mm;
+    width: 70mm;
+    height: 70mm;
+    opacity: 0.18;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: 1fr 1fr;
+    gap: 4mm;
+  }
+  .card.front .ornament div {
+    border-radius: 4mm;
+    background: white;
+  }
+  .card.front .ornament div:nth-child(2) { opacity: 0.5; }
+  .card.front .ornament div:nth-child(3) { opacity: 0.5; }
+  .card.front .ornament div:nth-child(4) { opacity: 0.3; }
+  .card.front .badge {
+    position: absolute;
+    top: 12mm;
+    right: 14mm;
+    font-size: 8pt;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    background: rgba(255,255,255,0.18);
+    padding: 1.5mm 3mm;
+    border-radius: 100px;
+    backdrop-filter: blur(4px);
+  }
+
+  /* ─── BACK (Adress-Seite, Deutsche-Post-konform) ─── */
+  .card.back {
+    background: #ffffff;
+    color: #0F172A;
+    position: relative;
+  }
+
+  /* Codierzone — bottom 15 mm, muss leer bleiben. Reservierter Platzhalter,
+     keine sichtbaren Hinweise (weder Bildschirm noch Druck). */
+  .codierzone {
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    height: 15mm;
+    pointer-events: none;
+  }
+
+  /* Frankierzone — top right 74 × 40 mm. Reservierter Platzhalter ohne
+     sichtbare Markierung — Briefmarke wird per Hand aufgeklebt. */
+  .frankierzone {
+    position: absolute;
+    top: 0; right: 0;
+    width: 74mm;
+    height: 40mm;
+    pointer-events: none;
+  }
+
+  /* Trennstrich — vertikal, 1.2 mm, von y=45mm (5mm unter Frankierzone)
+     bis y=85mm (5mm über Codierzone). 5mm Ruhezone beidseits. */
+  .trennstrich {
+    position: absolute;
+    left: 74mm;
+    top: 45mm;
+    height: 40mm;
+    width: 1.2mm;
+    background: #0F172A;
+    transform: translateX(-0.6mm);
+  }
+
+  /* Linke Hälfte — Nachricht + Logo + QR */
+  .back-left {
+    position: absolute;
+    top: 7mm; left: 7mm;
+    width: 62mm;          /* 74mm Mitte − 5mm Ruhezone − 7mm Sicherheit */
+    bottom: 18mm;         /* 15mm codierzone + 3mm sicherheit */
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+  }
+  .back-left .logo svg { height: 7mm; }
+  .back-left .salutation {
+    font-size: 9.5pt;
+    font-weight: 600;
+    color: #0F172A;
+    margin-top: 4mm;
+    margin-bottom: 2mm;
+  }
+  .back-left .body {
+    font-size: 8.5pt;
+    line-height: 1.45;
+    color: #334155;
+  }
+  .back-left .body strong { color: #0F172A; font-weight: 600; }
+  .back-left .body .accent { color: var(--hook-dark); font-weight: 600; }
+
+  .qr-row {
+    display: flex;
+    align-items: flex-end;
+    gap: 3mm;
+    margin-top: 3mm;
+  }
+  .qr {
+    flex: 0 0 26mm;
+    padding: 1.5mm;
+    background: white;
+    border: 1.2px solid var(--hook);
+    border-radius: 1.5mm;
+  }
+  .qr img {
+    display: block;
+    width: 23mm;
+    height: 23mm;
+  }
+  .qr-cta {
+    flex: 1;
+    font-size: 8pt;
+    line-height: 1.3;
+    color: #334155;
+  }
+  .qr-cta strong {
+    display: block;
+    font-size: 9pt;
+    color: var(--hook-dark);
+    margin-bottom: 0.8mm;
+  }
+
+  .signoff {
+    margin-top: 3mm;
+    font-size: 8.5pt;
+    line-height: 1.4;
+    color: #334155;
+  }
+  .signoff .name { font-weight: 600; color: #0F172A; }
+  .signoff .role { color: #64748B; }
+
+  /* Rechte Hälfte — Anschrift unterhalb Frankierzone, oberhalb Codierzone */
+  .back-right {
+    position: absolute;
+    top: 50mm;            /* 5mm unter Frankierzone */
+    left: 80mm;           /* 6mm rechts vom Trennstrich (5mm Ruhe + 1mm Innenrand) */
+    right: 5mm;           /* 5mm Sicherheitsabstand zum Rand */
+    bottom: 18mm;         /* über Codierzone */
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+  }
+  .recipient {
+    font-size: 11pt;
+    line-height: 1.55;
+    color: #0F172A;
+    font-weight: 400;
+  }
+  .recipient .name { font-weight: 600; }
+  .recipient .line { display: block; }
+
+  /* Optional: tiny footer hint, sits above the codierzone with safety margin.
+     Wird aufgrund der 3-mm-Regel nicht in den Codierbereich gezogen. */
+  .sender-footer {
+    position: absolute;
+    left: 7mm;
+    bottom: 16mm;          /* 1 mm über der Codierzone, 3 mm Sicherheit */
+    font-size: 6.5pt;
+    color: #94a3b8;
+    letter-spacing: 0.02em;
+    pointer-events: none;
+  }
+
+  /* ── Print-only screen helpers ─────────────────────────────── */
+  @media screen {
+    .page {
+      box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+      margin-top: 12mm;
+      margin-bottom: 12mm;
+    }
+  }
+  @media print {
+    body { background: white; }
+    .page { box-shadow: none; margin: 0; }
+  }
+
+  .tip {
+    max-width: 210mm;
+    margin: 16px auto 0;
+    padding: 10px 16px;
+    background: #fefce8;
+    border: 1px solid #fde68a;
+    border-radius: 6px;
+    color: #713f12;
+    font-size: 13px;
+    line-height: 1.5;
+  }
+  .tip strong { color: #422006; }
+  @media print { .tip { display: none; } }
+
+</style>
+</head>
+<body>
+
+<div class="tip">
+  <strong>Print tip:</strong> 6 A4 pages (3 fronts + 3 backs). Print via Cmd/Ctrl+P,
+  duplex (1↔2, 3↔4, 5↔6). Final format A6 (148 × 105 mm) — cut along the crop marks.
+  <strong>Address side:</strong> the codierzone (bottom 15 mm) and frankierzone (top-right 74 × 40 mm)
+  stay empty — Deutsche Post compliant. Sign by hand in the free space below the QR.
+</div>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <symbol id="lockup" viewBox="0 0 360 80">
+      <g transform="translate(8 16) scale(2)">
+        <rect x="3"  y="3"  width="7" height="7" rx="1.5" fill="#0F766E"/>
+        <rect x="14" y="3"  width="7" height="7" rx="1.5" fill="#87BAB6"/>
+        <rect x="3"  y="14" width="7" height="7" rx="1.5" fill="#87BAB6"/>
+        <rect x="14" y="14" width="7" height="7" rx="1.5" fill="#B6D7D5"/>
+      </g>
+      <text x="72" y="52" font-family="Inter, sans-serif" font-size="32" letter-spacing="-0.64">
+        <tspan font-weight="400" fill="#94A3B8">lease·a·</tspan><tspan font-weight="700" fill="#115E59">kitchen</tspan>
+      </text>
+    </symbol>
+  </defs>
+</svg>
+
+
+<!-- ═══════════════════════════════════════════════════════════════
+     L-1 · Evangelische Heimstiftung · Dr. Bürkle · OPTIMIZE
+     ═══════════════════════════════════════════════════════════════ -->
+
+<!-- ── L-1 FRONT ── -->
+<div class="page">
+  <div class="crop tl"></div><div class="crop tr"></div>
+  <div class="crop bl"></div><div class="crop br"></div>
+  <div class="card front m-optimize">
+    <div class="badge">For CFOs · Procurement</div>
+    <div class="logo"><svg width="62mm" height="14mm"><use href="#lockup"/></svg></div>
+    <div>
+      <div class="headline">Stop the<br/>CapEx roulette.</div>
+      <div class="sub">Bosch appliances on a lease. Off the balance sheet, fully deductible, predictable monthly rate.</div>
+    </div>
+    <div class="ornament"><div></div><div></div><div></div><div></div></div>
+  </div>
+</div>
+
+<!-- ── L-1 BACK ── -->
+<div class="page">
+  <div class="crop tl"></div><div class="crop tr"></div>
+  <div class="crop bl"></div><div class="crop br"></div>
+  <div class="card back m-optimize">
+    <div class="frankierzone"></div>
+    <div class="trennstrich"></div>
+
+    <div class="back-left">
+      <div>
+        <div class="salutation">Dear Dr. Bürkle,</div>
+        <div class="body">
+          we noticed the <strong>KfW-funded opening</strong> of your new senior residence
+          in Stuttgart (Q3 2026, ~120 residential units).
+          <br/><br/>
+          For a volume like yours our lease model is the right fit:
+          <span class="accent">CapEx becomes OpEx</span>, one monthly rate for the full
+          term — maintenance, repair and replacement included.
+        </div>
+      </div>
+      <div class="qr-row">
+        <div class="qr">
+          <img alt="QR Code"
+               src="https://api.qrserver.com/v1/create-qr-code/?size=300x300&margin=0&data=https%3A%2F%2Fmakeathontumai.vercel.app%2Fapi%2Fl%3Fid%3DL-1"/>
+        </div>
+        <div class="qr-cta">
+          <strong>2-minute check.</strong>
+          Scan the QR → tailored proposal.
+        </div>
+      </div>
+      <div class="signoff">
+        Best regards,<br/>
+        <span class="name">Frank Eberle</span><br/>
+        <span class="role">Sales Director · lease·a·kitchen</span>
+      </div>
+    </div>
+
+    <div class="back-right">
+      <div class="recipient">
+        <span class="line">Mr.</span>
+        <span class="line name">Dr. Stefan Bürkle</span>
+        <span class="line">Evangelische Heimstiftung GmbH</span>
+        <span class="line">Hackstraße 12</span>
+        <span class="line">70190 Stuttgart</span>
+      </div>
+    </div>
+
+    <div class="codierzone"></div>
+  </div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════════════════════════
+     L-3 · Dorea GmbH · Andreas Richter · SCALE
+     ═══════════════════════════════════════════════════════════════ -->
+
+<!-- ── L-3 FRONT ── -->
+<div class="page">
+  <div class="crop tl"></div><div class="crop tr"></div>
+  <div class="crop bl"></div><div class="crop br"></div>
+  <div class="card front m-scale">
+    <div class="badge">For Managing Directors</div>
+    <div class="logo"><svg width="62mm" height="14mm"><use href="#lockup"/></svg></div>
+    <div>
+      <div class="headline">Three new sites.<br/>Zero CapEx fight.</div>
+      <div class="sub">One master agreement. Bosch appliances pulled per site — the moment you open.</div>
+    </div>
+    <div class="ornament"><div></div><div></div><div></div><div></div></div>
+  </div>
+</div>
+
+<!-- ── L-3 BACK ── -->
+<div class="page">
+  <div class="crop tl"></div><div class="crop tr"></div>
+  <div class="crop bl"></div><div class="crop br"></div>
+  <div class="card back m-scale">
+    <div class="frankierzone"></div>
+    <div class="trennstrich"></div>
+
+    <div class="back-left">
+      <div>
+        <div class="salutation">Dear Mr. Richter,</div>
+        <div class="body">
+          three new sites across Berlin-Brandenburg — <strong>congratulations</strong> on the expansion.
+          <br/><br/>
+          With lease·a·kitchen you sign one master agreement — and pull
+          <span class="accent">Bosch appliances per site</span> when you need them.
+          No upfront purchase, no CapEx debate at every new building.
+        </div>
+      </div>
+      <div class="qr-row">
+        <div class="qr">
+          <img alt="QR Code"
+               src="https://api.qrserver.com/v1/create-qr-code/?size=300x300&margin=0&data=https%3A%2F%2Fmakeathontumai.vercel.app%2Fapi%2Fl%3Fid%3DL-3"/>
+        </div>
+        <div class="qr-cta">
+          <strong>2-minute check.</strong>
+          Scan the QR → proposal for your 3 sites.
+        </div>
+      </div>
+    </div>
+
+    <div class="back-right">
+      <div class="recipient">
+        <span class="line">Mr.</span>
+        <span class="line name">Andreas Richter</span>
+        <span class="line">Dorea GmbH</span>
+        <span class="line">Siemensdamm 62</span>
+        <span class="line">13627 Berlin</span>
+      </div>
+    </div>
+
+    <div class="codierzone"></div>
+  </div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════════════════════════
+     L-10 · Augustinum Gruppe · Sabine Fischer · SIMPLIFY
+     ═══════════════════════════════════════════════════════════════ -->
+
+<!-- ── L-10 FRONT ── -->
+<div class="page">
+  <div class="crop tl"></div><div class="crop tr"></div>
+  <div class="crop bl"></div><div class="crop br"></div>
+  <div class="card front m-simplify">
+    <div class="badge">For House Managers · Facility</div>
+    <div class="logo"><svg width="62mm" height="14mm"><use href="#lockup"/></svg></div>
+    <div>
+      <div class="headline">180 apartments.<br/>One contact.</div>
+      <div class="sub">When a machine breaks — swapped within 48 hours. Your team doesn't pick up the phone.</div>
+    </div>
+    <div class="ornament"><div></div><div></div><div></div><div></div></div>
+  </div>
+</div>
+
+<!-- ── L-10 BACK ── -->
+<div class="page">
+  <div class="crop tl"></div><div class="crop tr"></div>
+  <div class="crop bl"></div><div class="crop br"></div>
+  <div class="card back m-simplify">
+    <div class="frankierzone"></div>
+    <div class="trennstrich"></div>
+
+    <div class="back-left">
+      <div>
+        <div class="salutation">Dear Ms. Fischer,</div>
+        <div class="body">
+          your <strong>50th-anniversary refurbishment programme</strong> across the Munich residences —
+          180 apartments through 2027 — is the perfect moment to rethink the appliance setup.
+          <br/><br/>
+          We deliver, install, maintain and replace.
+          <span class="accent">48-hour express swap</span>, one invoice,
+          one contact.
+        </div>
+      </div>
+      <div class="qr-row">
+        <div class="qr">
+          <img alt="QR Code"
+               src="https://api.qrserver.com/v1/create-qr-code/?size=300x300&margin=0&data=https%3A%2F%2Fmakeathontumai.vercel.app%2Fapi%2Fl%3Fid%3DL-10"/>
+        </div>
+        <div class="qr-cta">
+          <strong>2-minute check.</strong>
+          Scan the QR → tailored proposal.
+        </div>
+      </div>
+      <div class="signoff">
+        Best regards,<br/>
+        <span class="name">Frank Eberle</span><br/>
+        <span class="role">Sales Director · lease·a·kitchen</span>
+      </div>
+    </div>
+
+    <div class="back-right">
+      <div class="recipient">
+        <span class="line">Ms.</span>
+        <span class="line name">Sabine Fischer</span>
+        <span class="line">Augustinum Gruppe</span>
+        <span class="line">Stiftsbogen 74</span>
+        <span class="line">81375 München</span>
+      </div>
+    </div>
+
+    <div class="codierzone"></div>
+  </div>
+</div>
+
+</body>
+</html>
