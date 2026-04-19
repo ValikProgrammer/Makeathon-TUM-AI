@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Your lease·a·kitchen Proposal</title>
+<style>
+  body { margin: 0; padding: 0; background: #f5f5f5; font-family: -apple-system, Arial, sans-serif; }
+  .wrapper { max-width: 600px; margin: 32px auto; background: #ffffff; border-radius: 8px; overflow: hidden; }
+  .header { background: #111; padding: 32px 40px; }
+  .header h1 { margin: 0; color: #fff; font-size: 22px; font-weight: 600; letter-spacing: -0.3px; }
+  .header p { margin: 4px 0 0; color: #888; font-size: 13px; }
+  .body { padding: 40px; }
+  .greeting { font-size: 16px; color: #111; margin-bottom: 24px; }
+  .section-title { font-size: 11px; font-weight: 700; letter-spacing: 0.8px; text-transform: uppercase; color: #888; margin: 32px 0 12px; }
+  table.bundle { width: 100%; border-collapse: collapse; }
+  table.bundle td { padding: 10px 0; border-bottom: 1px solid #f0f0f0; font-size: 14px; color: #333; }
+  table.bundle td:last-child { text-align: right; font-weight: 500; }
+  .total-row td { border-bottom: none; font-weight: 700; font-size: 16px; color: #111; padding-top: 16px; }
+  .cta { margin: 40px 0 0; text-align: center; }
+  .cta a { display: inline-block; background: #111; color: #fff; text-decoration: none; padding: 14px 40px; border-radius: 6px; font-size: 15px; font-weight: 600; letter-spacing: -0.2px; }
+  .footer { padding: 24px 40px; border-top: 1px solid #f0f0f0; font-size: 12px; color: #aaa; line-height: 1.6; }
+</style>
+</head>
+<body>
+<div class="wrapper">
+  <div class="header">
+    <h1>lease·a·kitchen</h1>
+    <p>BSH appliance rental for senior living</p>
+  </div>
+  <div class="body">
+    <p class="greeting">Dear {{contact_name}},<br><br>
+    thank you for your time. As discussed, here is your tailored proposal for <strong>{{company_name}}</strong>.</p>
+
+    <div class="section-title">Bundle Mix</div>
+    <table class="bundle">
+      {{bundle_rows}}
+      <tr>
+        <td>Contract term</td>
+        <td>{{term_months}} months</td>
+      </tr>
+      <tr class="total-row">
+        <td>Monthly total</td>
+        <td>€{{monthly_rate}}</td>
+      </tr>
+      <tr class="total-row">
+        <td>Contract value</td>
+        <td>€{{total_value}}</td>
+      </tr>
+    </table>
+
+    <div class="section-title">What's included</div>
+    <p style="font-size:14px;color:#555;line-height:1.7;margin:0">
+      Delivery &amp; installation · 48-hour swap guarantee · Full warranty · End-of-term pickup · One invoice, one contact.
+    </p>
+
+    <div class="cta">
+      <a href="{{purchase_url}}">Accept this offer</a>
+    </div>
+  </div>
+  <div class="footer">
+    lease·a·kitchen GmbH · BSH Group · lease-a-kitchen.de<br>
+    This proposal is valid for 14 days. Ref: {{lead_id}}
+  </div>
+</div>
+</body>
+</html>
