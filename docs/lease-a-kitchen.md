@@ -9,7 +9,7 @@ BSH home appliances (Bosch, Siemens) as a monthly lease to senior-living operato
 - **Target customer**: senior-living operators with 20–80 residential units
   (Diakonie, Caritas, AWO, Johanniter, private operators)
 - **Commercial agent** for BSH Hausgeräte GmbH since 01.03.2026
-- **Commission**: 7% of net order volume, no territorial limits
+- **Revenue model**: commercial-agent commission on net order volume, no territorial limits
 
 ## The rule that cannot be broken
 
