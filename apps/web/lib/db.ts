@@ -36,14 +36,11 @@ export type Stage =
 export type MotivationString = "simplify" | "scale" | "optimize" | "circular";
 
 export type Lead = {
+  // ── Actual DB columns (leads_untor) ──────────────────────────────────────
   id: string;
-  created_at: string;
-  updated_at: string;
   stage: Stage;
   company_name: string;
-  street?: string;
-  postal_code?: string;
-  city?: string;
+  postal_address?: string; // combined address field in DB
   url?: string;
   person_name?: string;
   person_role?: string;
@@ -53,17 +50,26 @@ export type Lead = {
   signal_summary?: string;
   motivation_string?: MotivationString;
   score?: number;
+  num_units?: number;
+  preferred_term_months?: number;
+  bundle_leader?: number;
+  bundle_profi?: number;
+  bundle_top_feature?: number;
+
+  // ── Virtual/display-only (not in DB — populated from postal_address) ───
+  created_at?: string;
+  updated_at?: string;
+  city?: string;
+
+  // ── Extra fields tracked locally / in audit only ──────────────────────
+  street?: string;
+  postal_code?: string;
   consent_given_at?: string;
   consent_text_version?: string;
   consent_ip?: string;
   facility_type?: string;
-  num_units?: number;
   timeline?: string;
-  preferred_term_months?: number;
   decision_maker?: string;
-  bundle_leader?: number;
-  bundle_profi?: number;
-  bundle_top_feature?: number;
   opt_in?: boolean;
   preferred_channel?: "email" | "whatsapp" | "phone";
   contact_address?: string;
@@ -85,6 +91,25 @@ export type AuditEntry = {
 
 // ── Twin helpers ───────────────────────────────────────────────────────────
 
+// Exact columns that exist in leads_untor table — never send anything else in PATCH
+const TWIN_COLUMNS = new Set([
+  "id", "stage", "company_name", "postal_address", "url",
+  "person_name", "person_role", "person_email", "person_phone",
+  "signal_url", "signal_summary", "motivation_string",
+  "score", "num_units", "preferred_term_months",
+  "bundle_leader", "bundle_profi", "bundle_top_feature",
+]);
+
+/** Strip fields not in the DB schema before PATCH — unknown fields cause 400 */
+function toDbFields(patch: Record<string, unknown>): Record<string, unknown> {
+  const filtered: Record<string, unknown> = {};
+  for (const [k, v] of Object.entries(patch)) {
+    if (TWIN_COLUMNS.has(k) && v !== undefined) filtered[k] = v;
+    else if (!TWIN_COLUMNS.has(k)) console.log(`[Twin] skipping unknown field "${k}" (not in DB schema)`);
+  }
+  return filtered;
+}
+
 function twinHeaders() {
   return {
     "Authorization": `Bearer ${TWIN_TOKEN}`,
@@ -96,13 +121,12 @@ function twinHeaders() {
 function rowToLead(row: Record<string, unknown>): Lead {
   return {
     id: String(row.id),
-    created_at: String(row.created_at ?? new Date().toISOString()),
-    updated_at: String(row.updated_at ?? new Date().toISOString()),
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
     stage: (row.stage as Stage) ?? "new",
     company_name: String(row.company_name ?? "Unknown"),
-    street: row.street != null ? String(row.street) : undefined,
-    postal_code: row.postal_code != null ? String(row.postal_code) : undefined,
-    city: row.city != null ? String(row.city) : undefined,
+    // DB has postal_address (combined), map it to city for display
+    city: row.postal_address != null ? String(row.postal_address) : undefined,
     url: row.url != null ? String(row.url) : undefined,
     person_name: row.person_name != null ? String(row.person_name) : undefined,
     person_role: row.person_role != null ? String(row.person_role) : undefined,
@@ -112,25 +136,11 @@ function rowToLead(row: Record<string, unknown>): Lead {
     signal_summary: row.signal_summary != null ? String(row.signal_summary) : undefined,
     motivation_string: row.motivation_string != null ? (row.motivation_string as MotivationString) : undefined,
     score: row.score != null ? Number(row.score) : undefined,
-    consent_given_at: row.consent_given_at != null ? String(row.consent_given_at) : undefined,
-    consent_text_version: row.consent_text_version != null ? String(row.consent_text_version) : undefined,
-    consent_ip: row.consent_ip != null ? String(row.consent_ip) : undefined,
-    facility_type: row.facility_type != null ? String(row.facility_type) : undefined,
     num_units: row.num_units != null ? Number(row.num_units) : undefined,
-    timeline: row.timeline != null ? String(row.timeline) : undefined,
     preferred_term_months: row.preferred_term_months != null ? Number(row.preferred_term_months) : undefined,
-    decision_maker: row.decision_maker != null ? String(row.decision_maker) : undefined,
     bundle_leader: row.bundle_leader != null ? Number(row.bundle_leader) : undefined,
     bundle_profi: row.bundle_profi != null ? Number(row.bundle_profi) : undefined,
     bundle_top_feature: row.bundle_top_feature != null ? Number(row.bundle_top_feature) : undefined,
-    opt_in: row.opt_in != null ? Boolean(row.opt_in) : undefined,
-    preferred_channel: row.preferred_channel != null ? (row.preferred_channel as Lead["preferred_channel"]) : undefined,
-    contact_address: row.contact_address != null ? String(row.contact_address) : undefined,
-    call_transcript_url: row.call_transcript_url != null ? String(row.call_transcript_url) : undefined,
-    call_notes: row.call_notes != null ? String(row.call_notes) : undefined,
-    escalation_reason: row.escalation_reason != null ? String(row.escalation_reason) : undefined,
-    offer_sent_at: row.offer_sent_at != null ? String(row.offer_sent_at) : undefined,
-    offer_accepted_at: row.offer_accepted_at != null ? String(row.offer_accepted_at) : undefined,
   };
 }
 
@@ -168,8 +178,7 @@ export async function getLeadByPhone(phone: string): Promise<Lead | undefined> {
 }
 
 export async function upsertLead(lead: Partial<Lead> & { id: string; company_name: string }): Promise<Lead> {
-  const now = new Date().toISOString();
-  const values = { ...lead, updated_at: now };
+  const values = toDbFields(lead as Record<string, unknown>);
 
   // Try INSERT first (upsert via primary key)
   const res = await fetch(`${TWIN_BASE}/twin/tables/${TWIN_TABLE}/rows`, {
@@ -204,7 +213,13 @@ export async function updateLead(id: string, patch: Partial<Lead>): Promise<Lead
     console.error(`[Twin] updateLead: TWIN_API_KEY not set — cannot update lead "${id}"!`);
     return null;
   }
-  const updates = { ...patch, updated_at: new Date().toISOString() };
+  // Filter to only columns that exist in the DB schema
+  const updates = toDbFields(patch as Record<string, unknown>);
+  if (Object.keys(updates).length === 0) {
+    console.log(`[Twin] updateLead: no valid DB fields in patch for "${id}" — skipping`);
+    return await getLeadById(id) ?? null;
+  }
+  console.log(`[Twin] updateLead "${id}": sending fields ${Object.keys(updates).join(", ")}`);
   const res = await fetch(`${TWIN_BASE}/twin/tables/${TWIN_TABLE}/rows`, {
     method: "PATCH",
     headers: twinHeaders(),
@@ -215,7 +230,7 @@ export async function updateLead(id: string, patch: Partial<Lead>): Promise<Lead
     console.error(`[Twin] updateLead FAILED for "${id}": ${res.status} ${body}`);
     return null;
   }
-  console.log(`[Twin] updateLead ok: "${id}" fields: ${Object.keys(patch).join(", ")}`);
+  console.log(`[Twin] updateLead ok: "${id}"`);
   return (await getLeadById(id)) ?? null;
 }
 
